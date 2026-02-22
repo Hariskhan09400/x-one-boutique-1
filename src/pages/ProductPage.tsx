@@ -94,24 +94,27 @@ Total: ₹${product.price * quantity}`;
         {/* ================= PRODUCT SECTION ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
 
-          {/* LEFT: Image Gallery */}
-          <div className="space-y-4 sticky top-6">
-            <div className="aspect-[4/5] sm:aspect-square overflow-hidden rounded-3xl bg-slate-100 dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800">
+          {/* LEFT: Image Gallery - FIXED: Mobile pe sticky hata diya, lg (desktop) pe rakha hai */}
+          <div className="space-y-6 lg:sticky lg:top-10">
+            <div className="aspect-[4/5] sm:aspect-square overflow-hidden rounded-[2.5rem] bg-slate-100 dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800">
               <img
                 src={product.images[selectedImage]}
-                className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                 alt={product.name}
               />
             </div>
+            
             {/* Thumbnails - Mobile Friendly Scroll */}
-            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            <div className="flex gap-4 overflow-x-auto py-2 no-scrollbar snap-x">
               {product.images.map((img, index) => (
                 <img
                   key={index}
                   src={img}
                   onClick={() => setSelectedImage(index)}
-                  className={`w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl cursor-pointer transition-all flex-shrink-0 border-2 ${
-                    selectedImage === index ? "border-blue-500 scale-95" : "border-transparent opacity-60 hover:opacity-100"
+                  className={`w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl cursor-pointer transition-all flex-shrink-0 border-2 snap-center ${
+                    selectedImage === index 
+                    ? "border-blue-500 scale-105 shadow-lg shadow-blue-500/20" 
+                    : "border-transparent opacity-50 hover:opacity-100"
                   }`}
                 />
               ))}
@@ -120,40 +123,46 @@ Total: ₹${product.price * quantity}`;
 
           {/* RIGHT: Product Info */}
           <div className="flex flex-col pt-2">
-            <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tight">{product.name}</h1>
+            <h1 className="text-4xl sm:text-6xl font-black mb-4 tracking-tighter bg-gradient-to-r from-slate-900 to-slate-500 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
+              {product.name}
+            </h1>
 
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-8">
               {averageRating && (
-                <div className="flex items-center bg-yellow-400/10 px-3 py-1 rounded-full">
+                <div className="flex items-center bg-yellow-400/10 px-4 py-1.5 rounded-full border border-yellow-400/20">
                   <span className="text-yellow-500 font-bold mr-1">★ {averageRating}</span>
-                  <span className="text-slate-500 dark:text-slate-400 text-xs">({reviews.length} Reviews)</span>
+                  <span className="text-slate-500 dark:text-slate-400 text-xs font-bold">({reviews.length} Reviews)</span>
                 </div>
               )}
-              <span className="text-xs font-bold uppercase tracking-widest text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full">In Stock</span>
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-blue-500 bg-blue-500/10 px-4 py-1.5 rounded-full border border-blue-500/20">
+                Premium Collection
+              </span>
             </div>
 
-            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-8">{product.description}</p>
+            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-10 max-w-xl">
+              {product.description}
+            </p>
 
-            <div className="mb-8">
-              <span className="text-4xl font-black text-blue-600 dark:text-blue-400">₹{product.price}</span>
-              <span className="ml-3 text-slate-400 line-through text-xl font-medium opacity-50">₹{product.price + 500}</span>
+            <div className="mb-10 flex items-baseline gap-4">
+              <span className="text-5xl font-black text-blue-600 dark:text-blue-400">₹{product.price}</span>
+              <span className="text-slate-400 line-through text-2xl font-medium opacity-50">₹{product.price + 500}</span>
             </div>
 
             {/* SIZE SELECTOR */}
-            <div className="mb-8 space-y-4">
+            <div className="mb-10 space-y-5">
               <div className="flex justify-between items-center">
-                <h3 className="font-bold text-sm uppercase tracking-wider text-slate-500">Select Size</h3>
-                <button className="text-xs text-blue-500 font-bold underline">Size Guide</button>
+                <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">Select Your Size</h3>
+                <button className="text-xs text-blue-500 font-bold hover:underline">Size Guide</button>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-4">
                 {["S", "M", "L", "XL"].map((size) => (
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
-                    className={`h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center rounded-2xl font-black transition-all border-2 active:scale-90 ${
+                    className={`h-14 w-14 sm:h-16 sm:w-16 flex items-center justify-center rounded-[1.25rem] font-black transition-all border-2 active:scale-90 ${
                       selectedSize === size
-                        ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30"
-                        : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-blue-400"
+                        ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-600/30"
+                        : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-blue-500"
                     }`}
                   >
                     {size}
@@ -163,14 +172,14 @@ Total: ₹${product.price * quantity}`;
             </div>
 
             {/* QUANTITY */}
-            <div className="mb-8 space-y-4">
-              <h3 className="font-bold text-sm uppercase tracking-wider text-slate-500">Quantity</h3>
-              <div className="flex items-center bg-slate-100 dark:bg-slate-900 w-fit rounded-2xl p-1 border border-slate-200 dark:border-slate-800">
+            <div className="mb-10 space-y-4">
+              <h3 className="font-black text-xs uppercase tracking-widest text-slate-400">Quantity</h3>
+              <div className="flex items-center bg-slate-100 dark:bg-slate-900/50 w-fit rounded-[1.25rem] p-1.5 border border-slate-200 dark:border-slate-800 shadow-inner">
                 <button
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   className="w-12 h-12 flex items-center justify-center text-2xl font-bold hover:text-blue-500 transition-colors"
                 >-</button>
-                <span className="w-12 text-center text-xl font-black">{quantity}</span>
+                <span className="w-14 text-center text-xl font-black">{quantity}</span>
                 <button
                   onClick={() => setQuantity((q) => q + 1)}
                   className="w-12 h-12 flex items-center justify-center text-2xl font-bold hover:text-blue-500 transition-colors"
@@ -179,7 +188,7 @@ Total: ₹${product.price * quantity}`;
             </div>
 
             {/* ACTION BUTTONS */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row gap-5 mb-10">
               <button
                 onClick={() => {
                   if (!selectedSize) { alert("Please select a size"); return; }
@@ -187,68 +196,72 @@ Total: ₹${product.price * quantity}`;
                   setShowToast(true);
                   setTimeout(() => setShowToast(false), 2000);
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-16 rounded-2xl font-black text-lg transition-all active:scale-95 shadow-xl shadow-blue-600/20"
+                className="flex-[1.5] bg-blue-600 hover:bg-blue-700 text-white h-20 rounded-[1.5rem] font-black text-xl transition-all active:scale-95 shadow-2xl shadow-blue-600/30 flex items-center justify-center gap-3"
               >
-                Add to Cart
+                <span>🛒</span> Add to Cart
               </button>
               <button
                 onClick={handleBuyNow}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white h-16 rounded-2xl font-black text-lg transition-all active:scale-95 shadow-xl shadow-green-600/20"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white h-20 rounded-[1.5rem] font-black text-xl transition-all active:scale-95 shadow-2xl shadow-emerald-600/30 flex items-center justify-center gap-3"
               >
-                Buy Now
+                <span>💬</span> Buy Now
               </button>
             </div>
 
             {/* TRUST BADGES */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                <span className="text-2xl">🚚</span>
-                <span className="text-sm font-bold text-slate-600 dark:text-slate-400">3-5 Days Delivery</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-4 p-5 rounded-3xl bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-white/5">
+                <div className="text-3xl">🚀</div>
+                <div>
+                    <p className="text-xs font-black uppercase text-slate-400">Shipping</p>
+                    <p className="text-sm font-bold">Fast Delivery</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
-                <span className="text-2xl">🔄</span>
-                <span className="text-sm font-bold text-slate-600 dark:text-slate-400">7 Days Return</span>
+              <div className="flex items-center gap-4 p-5 rounded-3xl bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-white/5">
+                <div className="text-3xl">🛡️</div>
+                <div>
+                    <p className="text-xs font-black uppercase text-slate-400">Warranty</p>
+                    <p className="text-sm font-bold">7 Days Return</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* ================= REVIEW SECTION ================= */}
-        <div className="mt-24 max-w-4xl">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
-            <h2 className="text-4xl font-black tracking-tight">Customer Reviews</h2>
-            <div className="flex items-center gap-2 bg-blue-500/10 text-blue-500 px-4 py-2 rounded-xl font-bold">
-              {reviews.length} Feedbacks
-            </div>
+        <div className="mt-32 max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-5xl font-black mb-4 tracking-tighter italic">Voice of Customers</h2>
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">{reviews.length} Authentic Feedbacks</p>
           </div>
 
           {/* Submit Review Card */}
-          <div className="bg-slate-50 dark:bg-slate-900 p-6 sm:p-8 rounded-3xl mb-12 border border-slate-200 dark:border-slate-800 shadow-sm">
-            <h3 className="text-xl font-bold mb-6">Write a review</h3>
-            <div className="space-y-4">
+          <div className="bg-slate-50 dark:bg-slate-900/50 p-6 sm:p-10 rounded-[3rem] mb-16 border border-slate-200 dark:border-white/5 shadow-xl backdrop-blur-sm">
+            <h3 className="text-2xl font-black mb-8">Share Your Thoughts</h3>
+            <div className="space-y-6">
               <input
                 type="text"
-                placeholder="Your Name"
+                placeholder="Full Name"
                 value={reviewName}
                 onChange={(e) => setReviewName(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500 outline-none transition-all dark:text-white"
+                className="w-full p-5 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-blue-500 outline-none transition-all dark:text-white font-bold"
               />
               <textarea
-                placeholder="Share your experience..."
+                placeholder="What did you love about this product?"
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
                 rows={4}
-                className="w-full p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500 outline-none transition-all dark:text-white"
+                className="w-full p-5 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 focus:border-blue-500 outline-none transition-all dark:text-white font-bold"
               />
-              <div className="flex items-center gap-4 py-2">
-                <span className="text-sm font-bold text-slate-500">Rating:</span>
-                <div className="flex gap-1">
+              <div className="flex items-center justify-between py-2 px-4 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-100 dark:border-slate-700">
+                <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Rate Us</span>
+                <div className="flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       onClick={() => setReviewRating(star)}
-                      className={`text-2xl transition-transform hover:scale-125 ${
-                        star <= reviewRating ? "text-yellow-400" : "text-slate-300 dark:text-slate-700"
+                      className={`text-3xl transition-all hover:scale-125 ${
+                        star <= reviewRating ? "text-yellow-400 drop-shadow-sm" : "text-slate-200 dark:text-slate-700"
                       }`}
                     >
                       ★
@@ -258,41 +271,41 @@ Total: ₹${product.price * quantity}`;
               </div>
               <button
                 onClick={handleSubmitReview}
-                className="w-full sm:w-auto bg-slate-900 dark:bg-blue-600 text-white px-10 py-4 rounded-2xl font-black hover:opacity-90 transition-all active:scale-95"
+                className="w-full bg-slate-900 dark:bg-blue-600 text-white py-5 rounded-2xl font-black text-lg hover:shadow-2xl transition-all active:scale-95"
               >
                 Post Review
               </button>
             </div>
 
-            {/* ADMIN LOGIN - Compact */}
-            <div className="mt-10 pt-6 border-t border-slate-200 dark:border-slate-800">
+            {/* ADMIN LOGIN - Integrated nicely */}
+            <div className="mt-12 pt-8 border-t border-slate-200 dark:border-white/5">
               {!adminMode ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-3 max-w-sm mx-auto">
                   <input
                     type="password"
-                    placeholder="Admin"
+                    placeholder="Admin Key"
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
-                    className="flex-1 min-w-[150px] p-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-sm outline-none dark:text-white"
+                    className="flex-1 p-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-sm outline-none font-bold"
                   />
                   <button
                     onClick={() => {
                       if (adminPassword === "xob123") {
                         setAdminMode(true);
                         setAdminPassword("");
-                      } else { alert("Wrong password"); }
+                      } else { alert("Access Denied"); }
                     }}
-                    className="bg-slate-800 dark:bg-slate-700 text-white px-4 py-3 rounded-xl text-sm font-bold"
+                    className="bg-slate-800 dark:bg-slate-700 text-white px-6 py-3 rounded-xl text-xs font-black uppercase"
                   >
-                    Admin Access
+                    Verify
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center justify-between bg-green-500/10 p-3 rounded-2xl">
-                  <span className="text-green-500 text-sm font-black">Logged in as Admin</span>
+                <div className="flex items-center justify-between bg-green-500/10 p-4 rounded-2xl border border-green-500/20 max-w-sm mx-auto">
+                  <span className="text-green-500 text-xs font-black uppercase tracking-widest">Admin Active</span>
                   <button
                     onClick={() => setAdminMode(false)}
-                    className="bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-bold"
+                    className="text-red-500 text-xs font-black hover:underline"
                   >
                     Logout
                   </button>
@@ -301,32 +314,37 @@ Total: ₹${product.price * quantity}`;
             </div>
           </div>
 
-          {/* Display Reviews - List View */}
-          <div className="space-y-6">
+          {/* Display Reviews */}
+          <div className="space-y-8">
             {reviews.length === 0 ? (
-              <div className="text-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl text-slate-400">
-                No reviews yet. Be the first to review!
+              <div className="text-center py-20 border-4 border-dotted border-slate-100 dark:border-slate-800 rounded-[3rem] text-slate-400 font-bold">
+                No stories yet. Be the first to share!
               </div>
             ) : (
               reviews.map((review) => (
-                <div key={review.id} className="group bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all relative">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-black text-lg">{review.name}</h3>
-                      <p className="text-xs text-slate-400 font-medium">{review.date}</p>
+                <div key={review.id} className="group bg-white dark:bg-slate-900/30 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 hover:border-blue-500/30 transition-all relative">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center font-black text-blue-500">
+                            {review.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-black text-xl">{review.name}</h3>
+                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">{review.date}</p>
+                        </div>
                     </div>
-                    <div className="flex text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-lg">
+                    <div className="flex text-yellow-400 bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20 text-sm">
                       {"★".repeat(review.rating)}
                     </div>
                   </div>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{review.text}</p>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-lg italic">"{review.text}"</p>
                   
                   {(review.ownerId === currentUserId || adminMode) && (
                     <button
                       onClick={() => handleDeleteReview(review.id)}
-                      className="mt-4 text-red-500 text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="mt-6 text-red-500 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:underline"
                     >
-                      Remove Review
+                      Delete Feedback
                     </button>
                   )}
                 </div>
@@ -336,11 +354,12 @@ Total: ₹${product.price * quantity}`;
         </div>
       </div>
 
-      {/* FIXED MOBILE ADD TO CART NOTIFICATION */}
+      {/* TOAST NOTIFICATION */}
       {showToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] w-[90%] sm:w-auto">
-          <div className="bg-green-500 text-white px-8 py-4 rounded-2xl font-black shadow-2xl animate-bounce flex items-center justify-center gap-2">
-            <span>✅</span> Added to Cart Successfully!
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] w-[90%] sm:w-auto px-6">
+          <div className="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-8 py-5 rounded-[2rem] font-black shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-bounce flex items-center justify-center gap-4">
+            <span className="bg-green-500 w-8 h-8 rounded-full flex items-center justify-center text-sm">✓</span>
+            Item added to your collection!
           </div>
         </div>
       )}
