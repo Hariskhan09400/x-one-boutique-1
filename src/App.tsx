@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react"; // useRef add kiya
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ProductPage from "./pages/ProductPage";
 import CheckoutPage from "./pages/CheckoutPage";
-import { ShoppingCart, MessageCircle, Search } from 'lucide-react';
+import { ShoppingCart, MessageCircle, Search, X } from 'lucide-react';
 import { Product, CartItem } from './types';
 import { products } from './data/products';
 import { ProductCard } from './components/ProductCard';
@@ -14,7 +14,6 @@ import ThemeToggle from "./components/ThemeToggle";
 import Layout from "./components/Layout";
 
 function App() {
-  // --- STATE MANAGEMENT ---
   const [cart, setCart] = useState<CartItem[]>(() => {
     const savedCart = localStorage.getItem("xob_cart");
     return savedCart ? JSON.parse(savedCart) : [];
@@ -26,9 +25,32 @@ function App() {
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
 
+  // --- REFS FOR JUMPING ---
+  const shopRef = useRef<HTMLDivElement>(null);
+  const aboutRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     localStorage.setItem("xob_cart", JSON.stringify(cart));
   }, [cart]);
+
+  // --- GET ALL UNIQUE CATEGORIES DYNAMICALLY ---
+  const allCategories = useMemo(() => {
+    return Array.from(new Set(products.map(p => p.category)));
+  }, []);
+
+  // --- SMART CLICK HANDLER ---
+  const handleCategoryClick = (cat: string | null) => {
+    setCategoryFilter(cat);
+    // 100ms wait taaki React filter kar le, phir scroll kare
+    setTimeout(() => {
+      shopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const scrollToAbout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    aboutRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   // --- FILTER & SORT LOGIC ---
   const filteredAndSortedProducts = useMemo(() => {
@@ -55,7 +77,6 @@ function App() {
     return sorted;
   }, [searchQuery, sortBy, categoryFilter]);
 
-  // --- CART ACTIONS ---
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
@@ -79,47 +100,28 @@ function App() {
     });
   };
 
-  const removeItem = (id: string) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
-  };
-
+  const removeItem = (id: string) => setCart((prev) => prev.filter((item) => item.id !== id));
   const clearCart = () => setCart([]);
 
-  // --- CHECKOUT HANDLERS ---
   const handleCheckoutWhatsApp = () => {
     let message = 'Hello! I want to order:\n\n';
-    cart.forEach((item) => {
-      message += `• ${item.name} x${item.quantity} - ₹${item.price * item.quantity}\n`;
-    });
+    cart.forEach((item) => { message += `• ${item.name} x${item.quantity} - ₹${item.price * item.quantity}\n`; });
     const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     message += `\nTotal: ₹${total}`;
     window.open(`https://wa.me/917208428589?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
-  const handleCheckoutEmail = () => {
-    let body = 'Order Details:\n\n';
-    cart.forEach((item) => {
-      body += `${item.name} x${item.quantity} - ₹${item.price * item.quantity}\n`;
-    });
-    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    body += `\nTotal: ₹${total}`;
-    window.location.href = `mailto:hariskhan5375123@gmail.com?subject=New Order from Website&body=${encodeURIComponent(body)}`;
   };
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <Router>
-      <Layout
-        cartItemCount={cartItemCount}
-        onCartOpen={() => setIsCartOpen(true)}
-        showToast={showToast}
-      >
+      <Layout cartItemCount={cartItemCount} onCartOpen={() => setIsCartOpen(true)} showToast={showToast}>
         <Routes>
           <Route
             path="/"
             element={
               <div className="flex flex-col min-h-screen">
+                {/* --- HEADER --- */}
                 <header className="sticky top-0 z-50 transition-all duration-500 backdrop-blur-2xl bg-gradient-to-r from-[#020617]/90 via-[#0f172a]/80 to-[#020617]/90 border-b border-blue-500/10 shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
                   <div className="max-w-7xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
@@ -131,62 +133,79 @@ function App() {
                         </div>
                       </a>
                       <nav className="hidden md:flex items-center gap-8">
-                        {["Shop", "About", "Contact"].map((item, index) => (
-                          <a key={index} href={`#${item.toLowerCase()}`} className="relative font-semibold text-blue-200 hover:text-white transition-all duration-300 group">
-                            {item}
-                            <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-gradient-to-r from-blue-400 to-cyan-400 group-hover:w-full transition-all duration-400"></span>
-                          </a>
-                        ))}
-                        <button onClick={() => setIsCartOpen(true)} className="relative flex items-center gap-2 px-5 py-2 rounded-full font-bold bg-gradient-to-r from-blue-600 to-cyan-500 hover:scale-105 transition-all duration-300 shadow-lg shadow-blue-500/30">
+                        <button onClick={() => handleCategoryClick(null)} className="font-semibold text-blue-200 hover:text-white transition-all">Shop</button>
+                        <a href="#about" onClick={scrollToAbout} className="font-semibold text-blue-200 hover:text-white transition-all">About</a>
+                        <a href="#contact" className="font-semibold text-blue-200 hover:text-white transition-all">Contact</a>
+                        <button onClick={() => setIsCartOpen(true)} className="flex items-center gap-2 px-5 py-2 rounded-full font-bold bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg">
                           <ShoppingCart size={20} /> Cart
-                          {cartItemCount > 0 && <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-bounce shadow-lg">{cartItemCount}</span>}
                         </button>
                       </nav>
-                      <button onClick={() => setIsCartOpen(true)} className="md:hidden relative p-3 bg-blue-600 rounded-full shadow-lg shadow-blue-500/40">
-                        <ShoppingCart size={22} />
-                        {cartItemCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{cartItemCount}</span>}
-                      </button>
                     </div>
                   </div>
                 </header>
 
                 <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
-                  <Hero onCategoryClick={setCategoryFilter} />
-                  <section id="shop" className="mt-4 sm:mt-6 md:mt-8 space-y-12 sm:space-y-16 md:space-y-20">
-                    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  {/* Hero now triggers Jump + Filter */}
+                  <Hero onCategoryClick={handleCategoryClick} />
+                  
+                  <section ref={shopRef} id="shop" className="mt-4 scroll-mt-24 space-y-12 sm:space-y-16">
+                    {/* --- SEARCH & SORT --- */}
+                    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4">
                       <div className="relative flex-1">
-                        <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 sm:pl-12 pr-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-black dark:text-white border border-gray-300 dark:border-gray-600 focus:outline-none transition-all" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-black dark:text-white border border-gray-300 dark:border-gray-600 focus:outline-none" />
+                        {categoryFilter && (
+                           <button onClick={() => setCategoryFilter(null)} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500"><X size={18}/></button>
+                        )}
                       </div>
-                      <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
+                      <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300">
                         <option value="pop">Sort: Popular</option>
                         <option value="low">Price: Low → High</option>
                         <option value="high">Price: High → Low</option>
                         <option value="az">Name: A → Z</option>
                       </select>
                     </div>
-                    {categoryFilter === "All" ? (
-                      <div>
-                        <h2 className="text-2xl font-bold mb-6">All Products</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                          {filteredAndSortedProducts.map((p) => (<ProductCard key={p.id} product={p} onAddToCart={addToCart} onOpenModal={setSelectedProduct} />))}
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {[{ id: "jeans", label: "Jeans" }, { id: "Kurta", label: "Kurta" }].map((s) => (
-                          <div key={s.id} id={s.id} className="scroll-mt-20">
-                            <h2 className="text-2xl font-bold mb-6">{s.label}</h2>
+
+                    {/* --- DYNAMIC LOGIC --- */}
+                    {(!categoryFilter || categoryFilter === "All") ? (
+                      <div className="space-y-16">
+                        {allCategories.map((catName) => (
+                          <div key={catName}>
+                            <h2 className="text-2xl font-bold mb-6 border-l-4 border-blue-500 pl-3">{catName}</h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                              {filteredAndSortedProducts.filter(p => p.category === s.label).map(p => (<ProductCard key={p.id} product={p} onAddToCart={addToCart} onOpenModal={setSelectedProduct} />))}
+                              {filteredAndSortedProducts.filter(p => p.category === catName).map(p => (
+                                <ProductCard key={p.id} product={p} onAddToCart={addToCart} onOpenModal={setSelectedProduct} />
+                              ))}
                             </div>
                           </div>
                         ))}
-                      </>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-center justify-between mb-6">
+                          <h2 className="text-3xl font-black uppercase italic text-blue-500">{categoryFilter} Collection</h2>
+                          <button onClick={() => setCategoryFilter(null)} className="text-sm font-bold underline">Show All</button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {filteredAndSortedProducts.map(p => (
+                            <ProductCard key={p.id} product={p} onAddToCart={addToCart} onOpenModal={setSelectedProduct} />
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </section>
+
+                  {/* --- ABOUT SECTION --- */}
+                  <section ref={aboutRef} id="about" className="mt-20 py-12 border-t border-gray-200 dark:border-gray-800">
+                    <h2 className="text-3xl font-bold mb-4">About X One Boutique</h2>
+                    <p className="text-gray-600 dark:text-gray-400 max-w-3xl">
+                      Welcome to X One Boutique, your ultimate destination for premium menswear. We specialize in high-quality Jeans, Kurtas, and accessories designed for the modern man. Our mission is to provide style and comfort at an affordable price.
+                    </p>
+                  </section>
+
                   <ContactForm />
                 </main>
+
                 <footer className="mt-8 border-t border-gray-800 bg-gray-950 p-8 text-center text-gray-400">
                   <p>© 2025 X One Boutique. All rights reserved.</p>
                 </footer>
@@ -197,56 +216,18 @@ function App() {
           <Route path="/checkout" element={<CheckoutPage cart={cart} onClearCart={clearCart} />} />
         </Routes>
 
-        {/* --- FLOATING CONTROLS (FIXED POSITIONS) --- */}
-        
-        {/* 1. Theme Toggle (Stacked Above WhatsApp) */}
-        <div className="fixed left-4 bottom-20 sm:bottom-24 z-50">
-           <ThemeToggle />
-        </div>
-
-        {/* 2. WhatsApp Button (Bottom Left) */}
-        <a
-          href="https://wa.me/917208428589"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="fixed left-3 bottom-4 z-50 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-full font-bold shadow-2xl transition-transform hover:scale-105 active:scale-95"
-        >
-          <MessageCircle size={20} />
-          <span className="hidden sm:inline">WhatsApp</span>
+        {/* --- FLOATING UI --- */}
+        <div className="fixed left-4 bottom-20 sm:bottom-24 z-50"><ThemeToggle /></div>
+        <a href="https://wa.me/917208428589" target="_blank" rel="noopener noreferrer" className="fixed left-3 bottom-4 z-50 flex items-center gap-2 bg-green-600 text-white px-4 py-3 rounded-full font-bold shadow-2xl">
+          <MessageCircle size={20} /> <span className="hidden sm:inline">WhatsApp</span>
         </a>
-
-        {/* 3. Floating Cart Button (Bottom Right) */}
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="fixed right-4 bottom-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-        >
-          <ShoppingCart size={20} />
-          <span className="hidden sm:inline">Cart</span>
-          {cartItemCount > 0 && (
-            <span className="w-6 h-6 bg-white text-blue-600 text-xs rounded-full flex items-center justify-center font-bold">
-              {cartItemCount}
-            </span>
-          )}
+        <button onClick={() => setIsCartOpen(true)} className="fixed right-4 bottom-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full font-bold bg-blue-600 text-white shadow-lg">
+          <ShoppingCart size={20} /> <span className="hidden sm:inline">Cart</span>
+          {cartItemCount > 0 && <span className="ml-1 bg-white text-blue-600 px-2 rounded-full text-xs">{cartItemCount}</span>}
         </button>
 
-        {showToast && (
-          <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-green-500 text-white px-6 py-3 rounded-full font-bold shadow-2xl animate-popIn">
-            Added to cart!
-          </div>
-        )}
-
         {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />}
-
-        <Cart 
-            isOpen={isCartOpen} 
-            items={cart} 
-            onClose={() => setIsCartOpen(false)} 
-            onUpdateQuantity={updateQuantity} 
-            onRemoveItem={removeItem} 
-            onClearCart={clearCart} 
-            onCheckoutWhatsApp={handleCheckoutWhatsApp} 
-            onCheckoutEmail={handleCheckoutEmail} 
-        />
+        <Cart isOpen={isCartOpen} items={cart} onClose={() => setIsCartOpen(false)} onUpdateQuantity={updateQuantity} onRemoveItem={removeItem} onClearCart={clearCart} onCheckoutWhatsApp={handleCheckoutWhatsApp} onCheckoutEmail={() => {}} />
       </Layout>
     </Router>
   );
