@@ -104,16 +104,16 @@ Total: ₹${product.price * quantity}`;
       : null;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 text-white">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 text-gray-900 dark:text-white">
 
       {/* ================= PRODUCT SECTION ================= */}
-      <div className="grid md:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
 
         {/* LEFT */}
         <div>
           <img
             src={product.images[selectedImage]}
-            className="w-full rounded-2xl shadow-2xl"
+            className="w-full h-auto rounded-2xl shadow-2xl object-cover"
           />
           <div className="flex gap-3 mt-4">
             {product.images.map((img, index) => (
@@ -189,7 +189,7 @@ Total: ₹${product.price * quantity}`;
           </div>
 
           {/* BUTTONS */}
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <button
               onClick={() => {
                 if (!selectedSize) {
