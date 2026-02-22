@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+
+<!-- Performance & Compatibility -->
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#001f3f" />
+<meta name="robots" content="index, follow" />
+<meta name="googlebot" content="index, follow" />
+<meta name="format-detection" content="telephone=no" />
+
+<!-- Canonical -->
+<link rel="canonical" href="https://yourdomain.com" />
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" href="https://i.postimg.cc/xCq8s0J0/favicon-ico.png" />
+
+<!-- Title -->
+<title>X One Boutique | Premium Men's Fashion Store</title>
+
+<!-- SEO -->
+<meta name="description" content="Shop premium men's fashion at X One Boutique. Jeans, T-Shirts, Denim Jackets & Belts. Easy ordering via WhatsApp & Email." />
+<meta name="author" content="X One Boutique" />
+<meta name="keywords" content="Men Fashion, Jeans, T-Shirts, Denim Jackets, Belts, X One Boutique, Online Men's Store" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="X One Boutique - Premium Men's Fashion" />
+<meta property="og:description" content="Exclusive men's clothing collection with easy WhatsApp & Email ordering." />
+<meta property="og:image" content="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200" />
+<meta property="og:url" content="https://yourdomain.com" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="X One Boutique - Premium Men's Fashion" />
+<meta name="twitter:description" content="Premium men's clothing collection." />
+<meta name="twitter:image" content="https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200" />
+
+<!-- Preconnect -->
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ClothingStore",
+  "name": "X One Boutique",
+  "image": "https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200",
+  "url": "https://yourdomain.com",
+  "telephone": "+917208428589",
+  "email": "hariskhan5375123@gmail.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "IN"
+  }
+}
+</script>
+
+<style>
+:root{
+  --primary:#00d9ff;
+  --secondary:#0072ff;
+  --dark:#001f3f;
+  --bg:#0a0f2c;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family:'Poppins', sans-serif;
+  background:var(--bg);
+  overflow-x:hidden;
+}
+
+/* LOADER */
+#loader{
+  position:fixed;
+  inset:0;
+  background:linear-gradient(135deg,#001f3f,#003366,#004080);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  z-index:9999;
+  transition:opacity 0.7s ease, visibility 0.7s ease;
+}
+
+#loader h1{
+  font-size:clamp(28px,6vw,50px);
+  letter-spacing:8px;
+  color:var(--primary);
+  animation:glow 1.8s infinite alternate;
+}
+
+.loader-line{
+  width:220px;
+  height:4px;
+  margin-top:20px;
+  background:linear-gradient(90deg,var(--primary),var(--secondary));
+  animation:loading 1.5s infinite;
+  border-radius:20px;
+}
+
+@keyframes glow{
+  from{ text-shadow:0 0 10px var(--primary); }
+  to{ text-shadow:0 0 40px #00ffff; }
+}
+
+@keyframes loading{
+  0%{ transform:scaleX(0); transform-origin:left; }
+  50%{ transform:scaleX(1); transform-origin:left; }
+  51%{ transform-origin:right; }
+  100%{ transform:scaleX(0); transform-origin:right; }
+}
+
+.fade-out{
+  opacity:0;
+  visibility:hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width:10px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb {
+  background:linear-gradient(180deg,var(--primary),var(--secondary));
+  border-radius:10px;
+  border:2px solid var(--bg);
+}
+</style>
+</head>
+
+<body>
+
+<!-- Loader -->
+<div id="loader" aria-label="Loading Screen">
+  <h1>X ONE BOUTIQUE</h1>
+  <div class="loader-line"></div>
+</div>
+
+<!-- React Root -->
+<div id="root"></div>
+
+<script>
+window.addEventListener("load",function(){
+  const loader = document.getElementById("loader");
+  setTimeout(()=> loader.classList.add("fade-out"),1500);
+});
+</script>
+
+<script type="module" src="/src/main.tsx"></script>
+
+</body>
+</html>
