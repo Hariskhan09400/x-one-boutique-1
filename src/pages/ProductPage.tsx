@@ -89,7 +89,7 @@ Total: ₹${product.price * quantity}`;
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#020617] transition-colors duration-300">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 text-slate-900 dark:text-white">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"> text-slate-900 dark:text-white"
 
         {/* ================= PRODUCT SECTION ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
