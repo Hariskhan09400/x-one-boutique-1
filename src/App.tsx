@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProductPage from "./pages/ProductPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import LoginPage from "./pages/LoginPage"; 
-import { MessageCircle, ShoppingCart, X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
+import { MessageCircle, ShoppingCart, X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, CreditCard, Truck } from 'lucide-react';
 import { Product, CartItem } from './types';
 import { products } from './data/products';
 import { ProductCard } from './components/ProductCard';
@@ -15,15 +15,61 @@ import ThemeToggle from "./components/ThemeToggle";
 import Layout from "./components/Layout";
 import Navbar from "./components/Navbar";
 
+// --- RAZORPAY SCRIPT LOADER ---
+const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 // --- CART SIDEBAR COMPONENT ---
-const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeItem, clearCart, cartTotal }: any) => {
+const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeItem, clearCart, cartTotal, user }: any) => {
   const navigate = useNavigate();
+
+  const handleOnlinePayment = async () => {
+    const res = await loadRazorpay();
+
+    if (!res) {
+      alert("Razorpay SDK failed to load. Are you online?");
+      return;
+    }
+
+    const options = {
+      key: "rzp_test_YOUR_KEY_HERE", // 👈 Replace with your Razorpay Key ID
+      amount: cartTotal * 100, // Razorpay takes amount in paise (₹1 = 100 paise)
+      currency: "INR",
+      name: "X One Boutique",
+      description: "Premium Menswear Purchase",
+      image: "https://your-logo-url.com/logo.png", // Tera logo yahan aayega
+      handler: function (response: any) {
+        // Yeh function tab chalta hai jab payment successful ho jaye
+        alert("Payment Successful! ID: " + response.razorpay_payment_id);
+        clearCart();
+        setIsCartOpen(false);
+        navigate("/");
+      },
+      prefill: {
+        name: user?.name || "",
+        email: user?.email || "",
+        contact: "",
+      },
+      theme: {
+        color: "#2563eb", // Blue theme to match your site
+      },
+    };
+
+    const paymentObject = new (window as any).Razorpay(options);
+    paymentObject.open();
+  };
 
   return (
     <AnimatePresence>
       {isCartOpen && (
         <div className="fixed inset-0 z-[200] flex justify-end">
-          {/* Animated Backdrop */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -32,7 +78,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
             onClick={() => setIsCartOpen(false)} 
           />
 
-          {/* Animated Sidebar */}
           <motion.div 
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -48,10 +93,10 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                 className="flex items-center gap-1 text-slate-500 hover:text-blue-600 transition-colors"
               >
                 <ArrowRight size={20} className="rotate-180" />
-                <span className="font-bold text-xs uppercase tracking-widest">Back</span>
+                <span className="font-bold text-xs uppercase tracking-widest text-[10px]">Back</span>
               </button>
               <h2 className="text-xl font-black dark:text-white uppercase tracking-tighter">My Cart</h2>
-              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-red-500">
+              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400">
                 <X size={24} />
               </button>
             </div>
@@ -59,9 +104,9 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
             {/* Items List */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
                   <ShoppingBag size={60} className="mb-4" />
-                  <p className="font-bold">Your cart is empty</p>
+                  <p className="font-bold uppercase text-sm">Empty Cart</p>
                 </div>
               ) : (
                 cart.map((item: any) => (
@@ -69,14 +114,14 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                     <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-xl" />
                     <div className="flex-1">
                       <h4 className="font-bold text-sm dark:text-white">{item.name}</h4>
-                      <p className="text-blue-600 font-black">₹{item.price}</p>
+                      <p className="text-blue-600 font-black italic">₹{item.price}</p>
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-lg px-2 py-1 border dark:border-slate-700">
                           <button onClick={() => updateQuantity(item.id, -1)} className="text-slate-400 hover:text-blue-500"><Minus size={14} /></button>
                           <span className="font-bold text-sm dark:text-white">{item.quantity}</span>
                           <button onClick={() => updateQuantity(item.id, 1)} className="text-slate-400 hover:text-blue-500"><Plus size={14} /></button>
                         </div>
-                        <button onClick={() => removeItem(item.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                        <button onClick={() => removeItem(item.id)} className="text-slate-400 hover:text-red-500">
                           <Trash2 size={18} />
                         </button>
                       </div>
@@ -86,29 +131,40 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
               )}
             </div>
 
-            {/* Footer - Yahan sirf Checkout option rakha hai */}
+            {/* Footer - Payment Options */}
             {cart.length > 0 && (
-              <div className="p-6 border-t dark:border-slate-800 space-y-4 bg-white dark:bg-slate-900">
-                <div className="flex justify-between items-center">
+              <div className="p-6 border-t dark:border-slate-800 space-y-3 bg-white dark:bg-slate-900 shadow-2xl">
+                <div className="flex justify-between items-center mb-2">
                   <span className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Total Amount</span>
                   <span className="text-2xl font-black dark:text-white">₹{cartTotal}</span>
                 </div>
                 
-                {/* PRIMARY CHECKOUT BUTTON */}
+                {/* 1. PROCEED TO COD */}
                 <button
                   onClick={() => {
                     setIsCartOpen(false);
                     navigate("/checkout");
                   }}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 group"
+                  className="w-full py-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 group"
                 >
-                  PROCEED TO CHECKOUT 
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  <Truck size={19} />
+                  PROCEED TO COD
+                  <ArrowRight size={17} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                {/* 2. PAY ONLINE (RAZORPAY) */}
+                <button
+                  onClick={handleOnlinePayment}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 group border border-blue-400/20"
+                >
+                  <CreditCard size={19} />
+                  PAY ONLINE (RAZORPAY)
+                  <ArrowRight size={17} className="group-hover:translate-x-1 transition-transform" />
                 </button>
 
                 <button 
                   onClick={clearCart} 
-                  className="w-full text-center text-slate-400 hover:text-red-500 text-xs font-bold uppercase tracking-widest pt-2 transition-colors"
+                  className="w-full text-center text-slate-400 hover:text-red-500 text-[10px] font-bold uppercase tracking-widest pt-2 transition-colors"
                 >
                   Clear Entire Cart
                 </button>
@@ -239,6 +295,7 @@ function App() {
               <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
                 <Hero onCategoryClick={handleCategoryClick} />
                 <section ref={shopRef} id="shop" className="mt-4 scroll-mt-24 space-y-12">
+                  {/* ... Existing Search/Sort UI ... */}
                   <div className="flex flex-col md:flex-row gap-3">
                     <div className="relative flex-1">
                       <input
@@ -246,7 +303,7 @@ function App() {
                         placeholder="Search products..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-4 pr-10 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none"
+                        className="w-full pl-4 pr-10 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 focus:outline-none transition-all"
                       />
                       {categoryFilter && (
                         <button onClick={() => setCategoryFilter(null)} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 font-bold">X</button>
@@ -269,9 +326,10 @@ function App() {
                     ))}
                   </div>
                 </section>
+                {/* ... About Section ... */}
                 <section ref={aboutRef} id="about" className="mt-20 py-12 border-t dark:border-gray-800">
-                  <h2 className="text-3xl font-bold mb-4">About X One Boutique</h2>
-                  <p className="text-gray-600 dark:text-gray-400">Premium menswear destination.</p>
+                  <h2 className="text-3xl font-bold mb-4 tracking-tighter italic">About X One Boutique</h2>
+                  <p className="text-gray-600 dark:text-gray-400">Defining modern luxury in menswear.</p>
                 </section>
                 <div id="contact"><ContactForm /></div>
               </main>
@@ -292,7 +350,6 @@ function App() {
           {cartItemCount > 0 && <span className="bg-white text-blue-600 px-2 rounded-full text-xs font-black">{cartItemCount}</span>}
         </button>
 
-        {/* --- SIDEBAR COMPONENT CALL --- */}
         <CartSidebar 
           isCartOpen={isCartOpen} 
           setIsCartOpen={setIsCartOpen}
@@ -301,6 +358,7 @@ function App() {
           removeItem={removeItem}
           clearCart={clearCart}
           cartTotal={cartTotal}
+          user={user}
         />
 
         {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />}
