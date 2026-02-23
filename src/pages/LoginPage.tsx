@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
-import { useNavigate, Link } from "react-router-dom"; // Link import kiya
+import { useNavigate, Link } from "react-router-dom";
 // IMPORT THE NEW UTILS WE CREATED
 import { handleLogin, handleSignup } from "../utils/auth"; 
 
@@ -79,59 +79,80 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <div className="space-y-4">
             {/* FULL NAME FIELD (Only for Sign Up) */}
             {!isLogin && (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Full Name</label>
-                <div className="relative">
-                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white"
-                    placeholder="John Doe"
-                  />
-                </div>
+              <div className="relative group animate-in fade-in slide-in-from-top-2 duration-300">
+                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 z-10" />
+                <input
+                  type="text"
+                  required
+                  id="fullname"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder=" "
+                  className="peer w-full pl-12 pr-4 pt-6 pb-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent"
+                />
+                <label 
+                  htmlFor="fullname"
+                  className="absolute left-12 top-4 text-slate-400 text-sm transition-all duration-200 cursor-text
+                  peer-placeholder-shown:text-base peer-placeholder-shown:top-4 
+                  peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-500
+                  peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-xs"
+                >
+                  Full Name
+                </label>
               </div>
             )}
 
             {/* EMAIL FIELD */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Email Address</label>
-              <div className="relative">
-                <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white"
-                  placeholder="name@company.com"
-                />
-              </div>
+            <div className="relative group">
+              <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 z-10" />
+              <input
+                type="email"
+                required
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder=" "
+                className="peer w-full pl-12 pr-4 pt-6 pb-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent"
+              />
+              <label 
+                htmlFor="email"
+                className="absolute left-12 top-4 text-slate-400 text-sm transition-all duration-200 cursor-text
+                peer-placeholder-shown:text-base peer-placeholder-shown:top-4 
+                peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-500
+                peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-xs"
+              >
+                Email Address
+              </label>
             </div>
 
             {/* PASSWORD FIELD */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Password</label>
-              <div className="relative">
-                <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-blue-500 transition-colors"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                </button>
-              </div>
+            <div className="relative group">
+              <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 z-10" />
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder=" "
+                className="peer w-full pl-12 pr-12 pt-6 pb-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent"
+              />
+              <label 
+                htmlFor="password"
+                className="absolute left-12 top-4 text-slate-400 text-sm transition-all duration-200 cursor-text
+                peer-placeholder-shown:text-base peer-placeholder-shown:top-4 
+                peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-500
+                peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-xs"
+              >
+                Password
+              </label>
+              <button
+                type="button"
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-blue-500 transition-colors z-20"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </button>
             </div>
           </div>
 
