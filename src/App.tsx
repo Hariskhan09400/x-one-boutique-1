@@ -29,8 +29,6 @@ const loadRazorpay = () => {
 // --- UPGRADED CART SIDEBAR COMPONENT ---
 const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeItem, clearCart, cartTotal, user }: any) => {
   const navigate = useNavigate();
-  
-  // Multi-step states (Instant Solution)
   const [step, setStep] = useState<'cart' | 'contact' | 'address'>('cart');
   const [formData, setFormData] = useState({
     phone: '',
@@ -42,30 +40,21 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     landmark: ''
   });
 
-  // Reset step when closed
   useEffect(() => {
     if (!isCartOpen) setTimeout(() => setStep('cart'), 300);
   }, [isCartOpen]);
 
-  // --- ONLINE PAYMENT HANDLER ---
   const handleOnlinePayment = async () => {
     const res = await loadRazorpay();
     if (!res) return alert("Razorpay SDK failed!");
-
     const options = {
       key: "rzp_live_SJYY3uYtuUcaHe", 
       amount: cartTotal * 100, 
       currency: "INR",
       name: "X ONE BOUTIQUE",
       description: `Order Checkout (${cart.length} items)`,
-      prefill: {
-        name: formData.fullName,
-        email: formData.email,
-        contact: formData.phone,
-      },
-      notes: {
-        address: `${formData.address}, ${formData.city} - ${formData.pincode}`,
-      },
+      prefill: { name: formData.fullName, email: formData.email, contact: formData.phone },
+      notes: { address: `${formData.address}, ${formData.city} - ${formData.pincode}` },
       theme: { color: "#2563eb" },
       handler: function (response: any) {
         alert("Payment Successful! ID: " + response.razorpay_payment_id);
@@ -78,22 +67,13 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     rzp.open();
   };
 
-  // --- WHATSAPP COD HANDLER (DIRECT MESSAGE) ---
   const handleWhatsAppOrder = () => {
     if (!formData.phone || !formData.address || !formData.fullName) {
       alert("Bhai, pehle address aur details toh bharo!");
       return;
     }
-
     const itemsList = cart.map((item: any) => `• ${item.name} (x${item.quantity}) - ₹${item.price * item.quantity}`).join('%0A');
-    
-    const message = `*NEW COD ORDER - X ONE BOUTIQUE*%0A%0A` +
-      `*Customer:* ${formData.fullName}%0A` +
-      `*Phone:* ${formData.phone}%0A` +
-      `*Address:* ${formData.address}, ${formData.landmark}, ${formData.city} - ${formData.pincode}%0A%0A` +
-      `*Items:*%0A${itemsList}%0A%0A` +
-      `*Total Amount: ₹${cartTotal}*`;
-
+    const message = `*NEW COD ORDER - X ONE BOUTIQUE*%0A%0A*Customer:* ${formData.fullName}%0A*Phone:* ${formData.phone}%0A*Address:* ${formData.address}, ${formData.landmark}, ${formData.city} - ${formData.pincode}%0A%0A*Items:*%0A${itemsList}%0A%0A*Total Amount: ₹${cartTotal}*`;
     window.open(`https://wa.me/917208428589?text=${message}`, "_blank");
     clearCart();
     setIsCartOpen(false);
@@ -106,8 +86,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
         <div className="fixed inset-0 z-[200] flex justify-end">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col">
-            
-            {/* Steps Header */}
             <div className="p-6 border-b dark:border-slate-800 flex items-center justify-between">
               <button onClick={() => step === 'address' ? setStep('contact') : step === 'contact' ? setStep('cart') : setIsCartOpen(false)} className="text-slate-400 hover:text-blue-600">
                 <ArrowRight size={22} className="rotate-180" />
@@ -119,7 +97,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
               </div>
               <X size={24} className="text-slate-400 cursor-pointer" onClick={() => setIsCartOpen(false)} />
             </div>
-
             <div className="flex-1 overflow-y-auto p-6">
               {step === 'cart' && (
                 <div className="space-y-4">
@@ -142,7 +119,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                   ))}
                 </div>
               )}
-
               {step === 'contact' && (
                 <div className="space-y-6">
                   <div className="text-center py-4"><User className="mx-auto text-blue-600 mb-2" /><h3 className="font-black uppercase">Contact Info</h3></div>
@@ -150,7 +126,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                   <input type="email" placeholder="Email Address" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                 </div>
               )}
-
               {step === 'address' && (
                 <div className="space-y-4">
                   <div className="text-center py-4"><MapPin className="mx-auto text-blue-600 mb-2" /><h3 className="font-black uppercase">Shipping Address</h3></div>
@@ -164,7 +139,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                 </div>
               )}
             </div>
-
             <div className="p-6 border-t dark:border-slate-800 bg-white dark:bg-slate-900 shadow-inner">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-slate-400 font-bold uppercase text-[10px]">Total Payable</span>
@@ -186,7 +160,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
   );
 };
 
-// --- START OF MAIN APP (Your Existing Logic Preserved) ---
 function App() {
   const [user, setUser] = useState<{ name: string; email: string } | null>(() => {
     const savedUser = localStorage.getItem("xob_user");
@@ -289,6 +262,7 @@ function App() {
   return (
     <Router>
       <Layout cartItemCount={cartItemCount} onCartOpen={() => setIsCartOpen(true)} showToast={showToast}>
+        {/* Navbar updated to accept themeElement for desktop */}
         <Navbar 
           user={user}
           onLogout={handleLogout}
@@ -296,6 +270,7 @@ function App() {
           onCartOpen={() => setIsCartOpen(true)}
           onShopClick={() => handleCategoryClick(null)}
           onAboutClick={scrollToAbout}
+          themeElement={<ThemeToggle />} 
         />
         <Routes>
           <Route path="/" element={
@@ -326,7 +301,16 @@ function App() {
                     ))}
                   </div>
                 </section>
-                <div id="contact"><ContactForm /></div>
+                
+                {/* Contact Form Section */}
+                <div id="contact" className="mt-20">
+                  <ContactForm />
+                  {/* MOBILE THEME TOGGLE: Appears right after Contact Us on phones */}
+                  <div className="md:hidden flex flex-col items-center gap-4 mt-12 pb-20 border-t dark:border-slate-800 pt-10">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Switch Appearance</p>
+                    <ThemeToggle />
+                  </div>
+                </div>
               </main>
             </div>
           } />
@@ -334,7 +318,7 @@ function App() {
           <Route path="/product/:id" element={<ProductPage onAddToCart={addToCart} />} />
           <Route path="/checkout" element={<CheckoutPage cart={cart} onClearCart={clearCart} />} />
         </Routes>
-        <div className="fixed left-4 bottom-20 z-50"><ThemeToggle /></div>
+
         <a href="https://wa.me/917208428589" className="fixed left-3 bottom-4 z-50 bg-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-110">
           <MessageCircle size={24} />
         </a>
@@ -342,6 +326,7 @@ function App() {
           <ShoppingCart size={24} />
           {cartItemCount > 0 && <span className="bg-white text-blue-600 px-2 rounded-full text-xs font-black">{cartItemCount}</span>}
         </button>
+
         <CartSidebar isCartOpen={isCartOpen} setIsCartOpen={setIsCartOpen} cart={cart} updateQuantity={updateQuantity} removeItem={removeItem} clearCart={clearCart} cartTotal={cartTotal} user={user} />
         {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />}
       </Layout>

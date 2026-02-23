@@ -21,31 +21,23 @@ const ThemeToggle = () => {
     }
   }, [darkMode]);
 
- return (
-  <button
-    onClick={() => setDarkMode(!darkMode)}
-    className="
-      fixed left-3 bottom-[72px] z-30
-      flex items-center justify-center
-      w-12 h-12 sm:w-auto sm:h-auto
-      sm:px-4 sm:py-2
-      rounded-full
-      bg-blue-600 text-white
-      dark:bg-white dark:text-black
-      shadow-2xl
-      transition-all duration-300 hover:scale-105
-    "
-  >
-    {/* ICON */}
-    <span className="text-xl">
-      {darkMode ? "☀️" : "🌙"}
-    </span>
-
-    {/* TEXT only desktop */}
-    <span className="hidden sm:inline font-semibold ml-2">
-      {darkMode ? "Light Mode" : "Dark Mode"}
-    </span>
-  </button>
+  return (
+    <button
+      onClick={() => setDarkMode(!darkMode)}
+      className="
+        flex items-center justify-center
+        px-4 py-2 rounded-xl
+        bg-slate-100 dark:bg-slate-800 
+        text-slate-900 dark:text-white
+        transition-all duration-300 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600
+        border border-slate-200 dark:border-slate-700
+      "
+    >
+      <span className="text-lg">{darkMode ? "☀️" : "🌙"}</span>
+      <span className="font-bold ml-2 text-sm uppercase tracking-wider">
+        {darkMode ? "Light" : "Dark"}
+      </span>
+    </button>
   );
 };
 
