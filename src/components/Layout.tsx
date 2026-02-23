@@ -2,24 +2,24 @@ import { ReactNode } from "react";
 
 interface LayoutProps {
   children: ReactNode;
-  cartItemCount: number;
-  onCartOpen: () => void;
-  showToast: boolean;
+  // Ab yahan cartItemCount aur onCartOpen ki zaroorat nahi kyunki Navbar yahan nahi hai
 }
 
-const Layout = ({
-  children,
-}: LayoutProps) => {
+const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen bg-white dark:bg-[#020617] text-black dark:text-white transition-colors duration-300">
       
-      {/* Saara extra logic (Header, Footer, Toast, WhatsApp) 
-         humne yahan se hata diya hai kyunki wo App.tsx mein handle ho raha hai.
-      */}
+      {/* ❌ Navbar yahan se hata diya hai taaki DOUBLE na dikhe */}
 
+      {/* ================= MAIN ================= */}
       <main>
         {children}
       </main>
+
+      {/* ================= FOOTER ================= */}
+      <footer className="mt-20 border-t border-slate-200 dark:border-slate-800 py-8 text-center text-sm text-slate-500">
+        © {new Date().getFullYear()} X One Boutique. All rights reserved.
+      </footer>
 
     </div>
   );
