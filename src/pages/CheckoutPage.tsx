@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"; // useEffect add kiya
 import { CartItem } from "../types";
 import { useNavigate } from "react-router-dom";
-import { Instagram, MessageCircle, Mail } from "lucide-react"; // Mail icon add kiya
+import { Instagram, MessageCircle, Mail } from "lucide-react";
 
 interface CheckoutProps {
   cart: CartItem[];
@@ -10,6 +10,15 @@ interface CheckoutProps {
 
 const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
   const navigate = useNavigate();
+
+  // --- STEP 2: AUTH GUARD LOGIC ---
+  useEffect(() => {
+    const token = localStorage.getItem("token"); // Token check kar rahe hain
+    if (!token) {
+      alert("Bhai, checkout karne ke liye pehle login toh kar lo! 😅");
+      navigate("/login"); // Login page par redirect
+    }
+  }, [navigate]);
 
   const [form, setForm] = useState({
     name: "",
@@ -28,9 +37,8 @@ const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Common message for all platforms
   const getOrderMessage = (isEmail: boolean) => {
-    const lineBreak = isEmail ? "%0D%0A" : "\n"; // Email ke liye line break alag hota hai
+    const lineBreak = isEmail ? "%0D%0A" : "\n";
     let message = `🛒 New Order${lineBreak}${lineBreak}`;
     message += `👤 Name: ${form.name}${lineBreak}`;
     message += `📞 Phone: ${form.phone}${lineBreak}`;
@@ -44,6 +52,7 @@ const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
   };
 
   const validateForm = () => {
+    // Basic check pehle se hai
     if (!form.name || !form.phone || !form.address || !form.city || !form.pincode) {
       alert("Please fill all details");
       return false;
@@ -81,7 +90,6 @@ const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10 grid md:grid-cols-2 gap-8">
-
       {/* FORM SECTION */}
       <div className="bg-gray-900 p-8 rounded-3xl shadow-xl border border-gray-800 text-white">
         <h1 className="text-3xl font-bold mb-6 tracking-tighter italic">
@@ -127,7 +135,6 @@ const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
           </div>
 
           <div className="pt-6 space-y-3">
-            {/* WHATSAPP */}
             <button
               onClick={handleWhatsAppSubmit}
               className="w-full bg-green-600 hover:bg-green-700 transition-all py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-lg"
@@ -136,7 +143,6 @@ const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
               Confirm on WhatsApp
             </button>
 
-            {/* INSTAGRAM */}
             <button
               onClick={handleInstagramSubmit}
               className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:opacity-90 transition-all py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-lg"
@@ -145,7 +151,6 @@ const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
               Confirm on Instagram
             </button>
 
-            {/* EMAIL (NEW) */}
             <button
               onClick={handleEmailSubmit}
               className="w-full bg-blue-600 hover:bg-blue-700 transition-all py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 shadow-lg"
@@ -186,17 +191,6 @@ const CheckoutPage = ({ cart, onClearCart }: CheckoutProps) => {
             <div className="border-t border-gray-800 mt-8 pt-6 flex justify-between text-2xl font-black">
               <span className="text-gray-500 uppercase text-sm self-center tracking-widest">Grand Total</span>
               <span className="text-white">₹{total}</span>
-            </div>
-
-            <div className="mt-8 grid grid-cols-2 gap-3">
-              <div className="bg-green-950/20 border border-green-900/30 p-3 rounded-xl text-center">
-                <p className="text-green-500 text-[10px] font-bold uppercase tracking-widest">Shipping</p>
-                <p className="text-white font-bold">FREE</p>
-              </div>
-              <div className="bg-blue-950/20 border border-blue-900/30 p-3 rounded-xl text-center">
-                <p className="text-blue-500 text-[10px] font-bold uppercase tracking-widest">Returns</p>
-                <p className="text-white font-bold">7 DAYS</p>
-              </div>
             </div>
           </>
         )}

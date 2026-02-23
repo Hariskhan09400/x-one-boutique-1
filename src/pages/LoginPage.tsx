@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { EyeIcon, EyeSlashIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Link import kiya
+// IMPORT THE NEW UTILS WE CREATED
+import { handleLogin, handleSignup } from "../utils/auth"; 
 
-// UPGRADE: TypeScript interface for props
 interface LoginPageProps {
   onLogin: (userData: { name: string; email: string }) => void;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) { // UPGRADE: Receiving onLogin prop
+export default function LoginPage({ onLogin }: LoginPageProps) {
   const [isLogin, setIsLogin] = useState(true); 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(""); // This is 'username' for the backend
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,20 +24,27 @@ export default function LoginPage({ onLogin }: LoginPageProps) { // UPGRADE: Rec
     setError("");
 
     try {
-      // Fake API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // UPGRADE: Sending data back to App.tsx
-      // Agar registration hai toh 'name' state use karo, login hai toh default "User"
-      onLogin({ 
-        name: isLogin ? (name || "User") : name, 
-        email: email 
-      });
-
-      console.log(isLogin ? "Login Success" : "Register Success", { email, name });
-      navigate("/"); 
+      if (isLogin) {
+        // --- REAL LOGIN CALL ---
+        const result = await handleLogin({ email, password });
+        if (result.success) {
+          onLogin({ name: result.user.username, email: result.user.email });
+          navigate("/");
+        } else {
+          setError(result.message || "Invalid credentials");
+        }
+      } else {
+        // --- REAL SIGNUP CALL ---
+        const result = await handleSignup({ username: name, email, password });
+        if (result.success) {
+          alert("Registration Successful! Please Login.");
+          setIsLogin(true);
+        } else {
+          setError(result.message || "Signup failed");
+        }
+      }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError("Server connection failed. Is your backend running?");
     } finally {
       setIsLoading(false);
     }
@@ -55,7 +63,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) { // UPGRADE: Rec
             X One Boutique
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            {isLogin ? "Welcome back! Please sign in." : "Create an account to start shopping."}
+            {isLogin ? "Welcome back! Please login." : "Create an account to start shopping."}
           </p>
         </div>
 
@@ -127,6 +135,18 @@ export default function LoginPage({ onLogin }: LoginPageProps) { // UPGRADE: Rec
             </div>
           </div>
 
+          {/* UPGRADE: FORGOT PASSWORD LINK POSITIONED CORRECTLY */}
+          {isLogin && (
+            <div className="flex justify-end -mt-2">
+              <Link 
+                to="/forgot-password" 
+                className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+          )}
+
           {/* --- SUBMIT BUTTON --- */}
           <button
             type="submit"
@@ -134,14 +154,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) { // UPGRADE: Rec
             className="w-full py-4 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-lg font-bold rounded-2xl shadow-lg shadow-blue-500/30 transform transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
           >
             {isLoading && <span className="animate-spin border-2 border-white border-t-transparent rounded-full h-5 w-5"></span>}
-            {isLogin ? "Sign In" : "Create Account"}
+            {isLogin ? "Login" : "Create Account"}
           </button>
 
           {/* --- ALTERNATIVE ACTIONS --- */}
           <div className="text-center space-y-4">
-            {isLogin && (
-              <a href="#" className="text-xs font-semibold text-blue-500 hover:text-blue-600">Forgot Password?</a>
-            )}
             
             <div className="flex items-center gap-3">
               <div className="flex-1 border-t border-slate-200 dark:border-slate-700"></div>
@@ -156,7 +173,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) { // UPGRADE: Rec
                 onClick={() => setIsLogin(!isLogin)}
                 className="font-bold text-blue-600 hover:text-blue-700 underline-offset-4 hover:underline"
               >
-                {isLogin ? "Sign up" : "Log in"}
+                {isLogin ? "Sign up" : "Login"}
               </button>
             </p>
           </div>

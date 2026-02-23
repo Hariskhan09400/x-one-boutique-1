@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProductPage from "./pages/ProductPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import LoginPage from "./pages/LoginPage"; 
-import { MessageCircle, ShoppingCart, X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, CreditCard, Truck, MapPin, User } from 'lucide-react';
+// --- IS LINE KO ADD KIYA HAI ---
+import ForgotPassword from "./pages/ForgotPassword"; 
+import { MessageCircle, ShoppingCart, X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, CreditCard, User, MapPin } from 'lucide-react';
 import { Product, CartItem } from './types';
 import { products } from './data/products';
 import { ProductCard } from './components/ProductCard';
@@ -43,6 +45,18 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
   useEffect(() => {
     if (!isCartOpen) setTimeout(() => setStep('cart'), 300);
   }, [isCartOpen]);
+
+  const handleProceedToCheckout = () => {
+    const savedUser = localStorage.getItem("xob_user");
+    
+    if (!savedUser) {
+      alert("Please sign in to checkout.🛍️");
+      setIsCartOpen(false);
+      navigate("/login");
+      return;
+    }
+    setStep('contact');
+  };
 
   const handleOnlinePayment = async () => {
     const res = await loadRazorpay();
@@ -97,26 +111,34 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
               </div>
               <X size={24} className="text-slate-400 cursor-pointer" onClick={() => setIsCartOpen(false)} />
             </div>
+
             <div className="flex-1 overflow-y-auto p-6">
               {step === 'cart' && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-black uppercase italic">Cart Summary</h3>
-                  {cart.map((item: any) => (
-                    <div key={item.id} className="flex gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
-                      <img src={item.image} className="w-16 h-16 object-cover rounded-xl" />
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm dark:text-white">{item.name}</h4>
-                        <div className="flex justify-between items-center mt-1">
-                          <p className="text-blue-600 font-black">₹{item.price}</p>
-                          <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-lg px-2 py-1">
-                            <button onClick={() => updateQuantity(item.id, -1)}><Minus size={14} /></button>
-                            <span className="font-bold text-sm">{item.quantity}</span>
-                            <button onClick={() => updateQuantity(item.id, 1)}><Plus size={14} /></button>
+                  {cart.length === 0 ? (
+                    <div className="text-center py-20 opacity-30 italic">
+                      <ShoppingBag size={48} className="mx-auto mb-4" />
+                      <p>Your cart is empty</p>
+                    </div>
+                  ) : (
+                    cart.map((item: any) => (
+                      <div key={item.id} className="flex gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
+                        <img src={item.image} className="w-16 h-16 object-cover rounded-xl" />
+                        <div className="flex-1">
+                          <h4 className="font-bold text-sm dark:text-white">{item.name}</h4>
+                          <div className="flex justify-between items-center mt-1">
+                            <p className="text-blue-600 font-black">₹{item.price}</p>
+                            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-lg px-2 py-1 shadow-sm">
+                              <button onClick={() => updateQuantity(item.id, -1)}><Minus size={14} /></button>
+                              <span className="font-bold text-sm">{item.quantity}</span>
+                              <button onClick={() => updateQuantity(item.id, 1)}><Plus size={14} /></button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )}
               {step === 'contact' && (
@@ -139,12 +161,33 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                 </div>
               )}
             </div>
+
             <div className="p-6 border-t dark:border-slate-800 bg-white dark:bg-slate-900 shadow-inner">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-slate-400 font-bold uppercase text-[10px]">Total Payable</span>
                 <span className="text-2xl font-black dark:text-white">₹{cartTotal}</span>
               </div>
-              {step === 'cart' && <button onClick={() => setStep('contact')} className="w-full py-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-black">PROCEED TO CHECKOUT</button>}
+              
+              {step === 'cart' && (
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={handleProceedToCheckout} 
+                    disabled={cart.length === 0}
+                    className="w-full py-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-black disabled:opacity-50 transition-all active:scale-95"
+                  >
+                    PROCEED TO CHECKOUT
+                  </button>
+
+                  <button 
+                    onClick={clearCart}
+                    disabled={cart.length === 0}
+                    className="w-full py-3 border-2 border-slate-100 dark:border-slate-800 text-slate-400 hover:text-red-500 hover:border-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-20"
+                  >
+                    <Trash2 size={18} /> CLEAR CART
+                  </button>
+                </div>
+              )}
+
               {step === 'contact' && <button onClick={() => formData.phone ? setStep('address') : alert("Phone toh daalo!")} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black">CONTINUE TO ADDRESS</button>}
               {step === 'address' && (
                 <div className="space-y-3">
@@ -262,7 +305,6 @@ function App() {
   return (
     <Router>
       <Layout cartItemCount={cartItemCount} onCartOpen={() => setIsCartOpen(true)} showToast={showToast}>
-        {/* Navbar updated to accept themeElement for desktop */}
         <Navbar 
           user={user}
           onLogout={handleLogout}
@@ -302,10 +344,8 @@ function App() {
                   </div>
                 </section>
                 
-                {/* Contact Form Section */}
                 <div id="contact" className="mt-20">
                   <ContactForm />
-                  {/* MOBILE THEME TOGGLE: Appears right after Contact Us on phones */}
                   <div className="md:hidden flex flex-col items-center gap-4 mt-12 pb-20 border-t dark:border-slate-800 pt-10">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Switch Appearance</p>
                     <ThemeToggle />
@@ -315,6 +355,8 @@ function App() {
             </div>
           } />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+          {/* --- FORGOT PASSWORD ROUTE ADDED HERE --- */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/product/:id" element={<ProductPage onAddToCart={addToCart} />} />
           <Route path="/checkout" element={<CheckoutPage cart={cart} onClearCart={clearCart} />} />
         </Routes>
@@ -322,7 +364,7 @@ function App() {
         <a href="https://wa.me/917208428589" className="fixed left-3 bottom-4 z-50 bg-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-110">
           <MessageCircle size={24} />
         </a>
-        <button onClick={() => setIsCartOpen(true)} className="fixed right-4 bottom-4 z-50 flex items-center gap-2 px-5 py-4 rounded-full bg-blue-600 text-white shadow-xl hover:bg-blue-700">
+        <button onClick={() => setIsCartOpen(true)} className="fixed right-4 bottom-4 z-50 flex items-center gap-2 px-5 py-4 rounded-full bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
           <ShoppingCart size={24} />
           {cartItemCount > 0 && <span className="bg-white text-blue-600 px-2 rounded-full text-xs font-black">{cartItemCount}</span>}
         </button>
