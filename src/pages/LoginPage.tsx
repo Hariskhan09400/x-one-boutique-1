@@ -51,7 +51,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-900/20 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-900/20 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-500">
       <div className="max-w-md w-full space-y-8">
         
         {/* --- HEADER --- */}
@@ -68,7 +68,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         </div>
 
         {/* --- FORM CARD --- */}
-        <form className="mt-8 space-y-6 bg-white/70 dark:bg-slate-800/40 backdrop-blur-2xl rounded-3xl p-8 shadow-2xl border border-white/40 dark:border-slate-700/50" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6 bg-white dark:bg-slate-800/40 backdrop-blur-2xl rounded-3xl p-8 shadow-2xl border border-slate-200/60 dark:border-slate-700/50" onSubmit={handleSubmit}>
           
           {error && (
             <div className="bg-red-100 dark:bg-red-900/30 border border-red-200 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm animate-pulse text-center">
@@ -76,11 +76,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* FULL NAME FIELD (Only for Sign Up) */}
             {!isLogin && (
               <div className="relative group animate-in fade-in slide-in-from-top-2 duration-300">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 z-10" />
+                <UserIcon className="absolute left-4 top-[26px] h-5 w-5 text-slate-400 z-10" />
                 <input
                   type="text"
                   required
@@ -88,11 +88,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder=" "
-                  className="peer w-full pl-12 pr-4 pt-6 pb-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent"
+                  className="peer w-full pl-12 pr-4 pt-6 pb-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent text-slate-900"
                 />
                 <label 
                   htmlFor="fullname"
-                  className="absolute left-12 top-4 text-slate-400 text-sm transition-all duration-200 cursor-text
+                  className="absolute left-12 top-4 text-slate-500 dark:text-slate-400 text-sm transition-all duration-200 cursor-text
                   peer-placeholder-shown:text-base peer-placeholder-shown:top-4 
                   peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-500
                   peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-xs"
@@ -104,7 +104,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
             {/* EMAIL FIELD */}
             <div className="relative group">
-              <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 z-10" />
+              <EnvelopeIcon className="absolute left-4 top-[26px] h-5 w-5 text-slate-400 z-10" />
               <input
                 type="email"
                 required
@@ -112,11 +112,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder=" "
-                className="peer w-full pl-12 pr-4 pt-6 pb-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent"
+                className="peer w-full pl-12 pr-4 pt-6 pb-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent text-slate-900"
               />
               <label 
                 htmlFor="email"
-                className="absolute left-12 top-4 text-slate-400 text-sm transition-all duration-200 cursor-text
+                className="absolute left-12 top-4 text-slate-500 dark:text-slate-400 text-sm transition-all duration-200 cursor-text
                 peer-placeholder-shown:text-base peer-placeholder-shown:top-4 
                 peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-500
                 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-xs"
@@ -127,7 +127,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
             {/* PASSWORD FIELD */}
             <div className="relative group">
-              <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 z-10" />
+              <LockClosedIcon className="absolute left-4 top-[26px] h-5 w-5 text-slate-400 z-10" />
               <input
                 type={showPassword ? "text" : "password"}
                 required
@@ -135,11 +135,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder=" "
-                className="peer w-full pl-12 pr-12 pt-6 pb-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent"
+                className="peer w-full pl-12 pr-12 pt-6 pb-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-transparent text-slate-900"
               />
               <label 
                 htmlFor="password"
-                className="absolute left-12 top-4 text-slate-400 text-sm transition-all duration-200 cursor-text
+                className="absolute left-12 top-4 text-slate-500 dark:text-slate-400 text-sm transition-all duration-200 cursor-text
                 peer-placeholder-shown:text-base peer-placeholder-shown:top-4 
                 peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-500
                 peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-xs"
@@ -148,7 +148,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               </label>
               <button
                 type="button"
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-blue-500 transition-colors z-20"
+                className="absolute right-4 top-[26px] -translate-y-1/2 p-1 text-slate-400 hover:text-blue-500 transition-colors z-20"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
@@ -156,12 +156,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </div>
           </div>
 
-          {/* UPGRADE: FORGOT PASSWORD LINK POSITIONED CORRECTLY */}
+          {/* FORGOT PASSWORD */}
           {isLogin && (
             <div className="flex justify-end -mt-2">
               <Link 
                 to="/forgot-password" 
-                className="text-xs font-bold text-blue-500 hover:text-blue-600 transition-colors"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
               >
                 Forgot Password?
               </Link>
@@ -180,14 +180,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
           {/* --- ALTERNATIVE ACTIONS --- */}
           <div className="text-center space-y-4">
-            
             <div className="flex items-center gap-3">
               <div className="flex-1 border-t border-slate-200 dark:border-slate-700"></div>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">OR</span>
+              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">OR</span>
               <div className="flex-1 border-t border-slate-200 dark:border-slate-700"></div>
             </div>
 
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600 dark:text-slate-500">
               {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
               <button
                 type="button"
