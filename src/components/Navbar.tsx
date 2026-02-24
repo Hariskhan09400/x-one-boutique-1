@@ -3,13 +3,15 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ShoppingCart, User, Menu, X, LogOut } from 'lucide-react';
 
 interface NavbarProps {
-  user: { name: string } | null;
+  user: any;
   onLogout: () => void;
   cartItemCount: number;
   onCartOpen: () => void;
-  onShopClick?: () => void;
-  onAboutClick?: () => void;
-  themeElement?: React.ReactNode; 
+  onShopClick: () => void;
+  onAboutClick: () => void;
+  themeElement: React.ReactNode;
+  // Agar onCategoryClick yahan defined hai, toh usse remove kar do ya
+  // usse (cat: string | null) => void bana do.
 }
 
 const Navbar = ({ user, onLogout, cartItemCount, onCartOpen, onShopClick, onAboutClick, themeElement }: NavbarProps) => {

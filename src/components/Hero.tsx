@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 interface HeroProps {
-  onCategoryClick: React.Dispatch<React.SetStateAction<string | null>>;
+  onCategoryClick: (category: string | null) => void; // Fix the type here
 }
 
 export function Hero({ onCategoryClick }: HeroProps) {

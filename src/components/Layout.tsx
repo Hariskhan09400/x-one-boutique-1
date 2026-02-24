@@ -2,6 +2,9 @@ import { ReactNode } from "react";
 
 interface LayoutProps {
   children: ReactNode;
+  cartItemCount: number;      // Add this
+  onCartOpen: () => void;      // Add this
+  showToast: boolean;          // Add this
   // Ab yahan cartItemCount aur onCartOpen ki zaroorat nahi kyunki Navbar yahan nahi hai
 }
 

@@ -1,33 +1,28 @@
 import React, { useState } from "react";
 import { Product } from "../types";
-import { ShoppingCart, X, CheckCircle2 } from "lucide-react"; // CheckCircle2 icon add kiya
+import { ShoppingCart, X, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => void;
+  onOpenModal: (product: Product) => void; 
 }
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+// Destructure mein onOpenModal bhi add kiya taaki error na aaye
+export function ProductCard({ product, onAddToCart, onOpenModal }: ProductCardProps) {
   const [open, setOpen] = useState(false);
-  const [showPopup, setShowPopup] = useState(false); // Popup state
-  const [isAdding, setIsAdding] = useState(false); // Button state
-
-  const handleVideoClick = (e: React.MouseEvent<HTMLVideoElement>) => {
-    const video = e.currentTarget;
-    video.paused ? video.play() : video.pause();
-  };
+  const [showPopup, setShowPopup] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
   // ADD TO CART WITH POPUP LOGIC
   const handleAddWithFeedback = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAddToCart(product);
     
-    // UI Feedback
     setIsAdding(true);
     setShowPopup(true);
 
-    // 2 second baad wapas normal kar do
     setTimeout(() => {
       setShowPopup(false);
       setIsAdding(false);
@@ -58,27 +53,18 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         bg-white text-black
         dark:bg-gradient-to-b dark:from-blue-950 dark:to-black dark:text-white"
       >
-        {/* IMAGE / VIDEO */}
+        {/* IMAGE SECTION (Video logic removed) */}
         <div className="relative w-full overflow-hidden">
           <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar">
-            {product.video ? (
-              <video
-                src={product.video}
-                className="w-full h-72 object-cover snap-start flex-shrink-0 cursor-pointer"
-                onClick={handleVideoClick}
-                muted
-              />
-            ) : (
-              product.images?.map((img, index) => (
-                <Link key={index} to={`/product/${product.id}`}>
-                  <img
-                    src={img}
-                    alt={product.name}
-                    className="w-full h-72 object-cover snap-start flex-shrink-0 cursor-pointer"
-                  />
-                </Link>
-              ))
-            )}
+            {product.images?.map((img, index) => (
+              <Link key={index} to={`/product/${product.id}`} className="w-full flex-shrink-0">
+                <img
+                  src={img}
+                  alt={product.name}
+                  className="w-full h-72 object-cover snap-start cursor-pointer"
+                />
+              </Link>
+            ))}
           </div>
 
           <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/70 backdrop-blur-md rounded-full text-xs font-semibold text-white">
@@ -95,7 +81,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         {/* CONTENT */}
         <div className="p-4">
           <h3 className="font-bold text-lg mb-1">{product.name}</h3>
-          <p className="text-sm mb-3 text-gray-600 dark:text-gray-400">{product.description}</p>
+          <p className="text-sm mb-3 text-gray-600 dark:text-gray-400 line-clamp-2">{product.description}</p>
 
           {/* PRICE + BUTTON */}
           <div className="flex items-center justify-between">
@@ -131,8 +117,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         </div>
       </div>
 
-      {/* FULL SCREEN MODAL */}
-      {open && !product.video && (
+      {/* FULL SCREEN MODAL (Video check removed) */}
+      {open && (
         <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center">
           <button onClick={() => setOpen(false)} className="absolute top-6 right-6 text-white hover:text-red-400">
             <X size={32} />

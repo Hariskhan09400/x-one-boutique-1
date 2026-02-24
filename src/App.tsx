@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom"; 
 import { motion, AnimatePresence } from "framer-motion"; 
+import toast, { Toaster } from 'react-hot-toast'; 
+import UpdatePassword from "./pages/UpdatePassword";
 import ProductPage from "./pages/ProductPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import LoginPage from "./pages/LoginPage"; 
 import ForgotPassword from "./pages/ForgotPassword"; 
-import { MessageCircle, ShoppingCart, X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, CreditCard, User, MapPin } from 'lucide-react';
+import { MessageCircle, ShoppingCart, X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, CreditCard, User, MapPin, AlertCircle } from 'lucide-react';
 import { Product, CartItem } from './types';
 import { products } from './data/products';
 import { ProductCard } from './components/ProductCard';
@@ -16,10 +18,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import Layout from "./components/Layout";
 import Navbar from "./components/Navbar";
 
-// --- API URL CONFIGURATION ---
 export const API_URL = import.meta.env.VITE_API_URL || "https://x-one-boutique-backend-production.up.railway.app";
-
-
 
 const loadRazorpay = () => {
   return new Promise((resolve) => {
@@ -50,8 +49,50 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
 
   const handleProceedToCheckout = () => {
     const savedUser = localStorage.getItem("xob_user");
+    
     if (!savedUser) {
-      alert("Please sign in to checkout.🛍️");
+      // UPGRADED: Working Cross Button + 3s Auto-hide
+      toast.custom((t) => (
+        <div 
+          className={`${
+            t.visible ? 'animate-enter' : 'animate-leave'
+          } max-w-md w-full bg-white dark:bg-slate-900 shadow-2xl rounded-2xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4 mb-20 border-l-4 border-red-500`}
+        >
+          <div className="flex-1 w-0">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <AlertCircle className="h-10 w-10 text-red-500" />
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">
+                  Authentication Required
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Please log in first to continue shopping.🛍️
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="ml-4 flex-shrink-0 flex">
+            {/* FIX: Is button pe click karte hi popup band hoga */}
+<button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // dismiss se halka sa (0.1s) animation milta hai jo 'remove' se better lagta hai
+                toast.dismiss(t.id); 
+              }} 
+              className="rounded-md inline-flex text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors p-1 active:scale-90"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      ), { 
+        id: 'signin-error',
+        duration: 2100 // 3 seconds baad apne aap hat jayega
+      });
+      
       setIsCartOpen(false);
       navigate("/login");
       return;
@@ -61,7 +102,8 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
 
   const handleOnlinePayment = async () => {
     const res = await loadRazorpay();
-    if (!res) return alert("Razorpay SDK failed!");
+    if (!res) return toast.error("Razorpay SDK failed to load! ❌");
+    
     const options = {
       key: "rzp_live_SJYY3uYtuUcaHe", 
       amount: cartTotal * 100, 
@@ -72,7 +114,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
       notes: { address: `${formData.address}, ${formData.city} - ${formData.pincode}` },
       theme: { color: "#2563eb" },
       handler: function (response: any) {
-        alert("Payment Successful! ID: " + response.razorpay_payment_id);
+        toast.success("Payment Successful! 🎉");
         clearCart();
         setIsCartOpen(false);
         navigate("/");
@@ -84,7 +126,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
 
   const handleWhatsAppOrder = () => {
     if (!formData.phone || !formData.address || !formData.fullName) {
-      alert("Bhai, pehle address aur details toh bharo!");
+      toast.error("Bhai, pehle details toh bharo! 📍");
       return;
     }
     const itemsList = cart.map((item: any) => `• ${item.name} (x${item.quantity}) - ₹${item.price * item.quantity}`).join('%0A');
@@ -176,7 +218,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                 </div>
               )}
 
-              {step === 'contact' && <button onClick={() => formData.phone ? setStep('address') : alert("Phone toh daalo!")} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black">CONTINUE TO ADDRESS</button>}
+              {step === 'contact' && <button onClick={() => formData.phone ? setStep('address') : toast.error("Phone number toh daalo!")} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black">CONTINUE TO ADDRESS</button>}
               {step === 'address' && (
                 <div className="space-y-3">
                   <button onClick={handleOnlinePayment} className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-2"><CreditCard size={18} /> PAY ONLINE</button>
@@ -207,7 +249,6 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'pop' | 'low' | 'high' | 'az'>('pop');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState(false);
 
   const shopRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
@@ -215,11 +256,13 @@ function App() {
   const handleLogin = (userData: { name: string; email: string }) => {
     setUser(userData);
     localStorage.setItem("xob_user", JSON.stringify(userData));
+    toast.success(`Welcome back, ${userData.name}!`);
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("xob_user");
+    toast.success("Logged out successfully");
   };
 
   useEffect(() => {
@@ -271,8 +314,9 @@ function App() {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
+    toast.success(`${product.name} added to cart! 🛍️`, {
+        position: 'bottom-center'
+    });
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -284,15 +328,34 @@ function App() {
     });
   };
 
-  const removeItem = (id: string) => setCart((prev) => prev.filter((item) => item.id !== id));
-  const clearCart = () => setCart([]);
+  const removeItem = (id: string) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+    toast.error("Item removed");
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    toast.error("Cart cleared");
+  };
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <Router>
-      <Layout cartItemCount={cartItemCount} onCartOpen={() => setIsCartOpen(true)} showToast={showToast}>
+      <Toaster 
+        position="bottom-center" 
+        gutter={8}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            marginBottom: '90px', 
+            zIndex: 9999
+          }
+        }}
+      /> 
+
+      <Layout cartItemCount={cartItemCount} onCartOpen={() => setIsCartOpen(true)}>
         <Navbar 
           user={user}
           onLogout={handleLogout}
@@ -337,6 +400,7 @@ function App() {
               </main>
             </div>
           } />
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/product/:id" element={<ProductPage onAddToCart={addToCart} />} />
@@ -346,6 +410,7 @@ function App() {
         <a href="https://wa.me/917208428589" className="fixed left-3 bottom-4 z-50 bg-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-110">
           <MessageCircle size={24} />
         </a>
+        
         <button onClick={() => setIsCartOpen(true)} className="fixed right-4 bottom-4 z-50 flex items-center gap-2 px-5 py-4 rounded-full bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
           <ShoppingCart size={24} />
           {cartItemCount > 0 && <span className="bg-white text-blue-600 px-2 rounded-full text-xs font-black">{cartItemCount}</span>}
