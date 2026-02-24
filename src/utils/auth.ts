@@ -1,15 +1,13 @@
-// --- CONFIGURATION ---
-// Backend port 5000 par hai aur frontend 5173 par, isliye 5000 use kiya hai
-const API_URL = "http://localhost:5000/api";
+// 1. App.tsx se API_URL import kiya taaki Vercel ke variables use ho sakein
+import { API_URL } from '../App'; 
 
 /**
  * SIGNUP FUNCTION
- * User ka account banane ke liye
+ * Naya user register karne ke liye
  */
 export const handleSignup = async (userData: { username?: string; fullName?: string; email: string; password: string }) => {
     try {
-        // Debugging: Console mein check karne ke liye ki data kya ja raha hai
-        console.log("Attempting signup with:", userData);
+        console.log("Connecting to:", `${API_URL}/signup`);
 
         const response = await fetch(`${API_URL}/signup`, {
             method: "POST",
@@ -29,16 +27,19 @@ export const handleSignup = async (userData: { username?: string; fullName?: str
         console.error("Signup Error:", error);
         return { 
             success: false, 
-            message: "Server se connection nahi ho paya. Backend check karein!" 
+            message: "Server se connection nahi ho paya. Railway backend check karein!" 
         };
     }
 };
 
 /**
  * LOGIN FUNCTION
+ * User login handle karne ke liye
  */
 export const handleLogin = async (credentials: { email: string; password: string }) => {
     try {
+        console.log("Attempting Login at:", `${API_URL}/login`);
+
         const response = await fetch(`${API_URL}/login`, {
             method: "POST",
             headers: { 
@@ -50,6 +51,7 @@ export const handleLogin = async (credentials: { email: string; password: string
         const data = await response.json();
 
         if (response.ok) {
+            // Token aur user details save karna
             localStorage.setItem("token", data.token);
             localStorage.setItem("user", JSON.stringify(data.user));
             return { 
@@ -66,7 +68,7 @@ export const handleLogin = async (credentials: { email: string; password: string
         console.error("Login Error:", error);
         return { 
             success: false, 
-            message: "Server is down. Check backend port 5000!" 
+            message: "Server is down. Vercel Settings mein Variable check karein!" 
         };
     }
 };

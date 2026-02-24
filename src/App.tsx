@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import ProductPage from "./pages/ProductPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import LoginPage from "./pages/LoginPage"; 
-// --- IS LINE KO ADD KIYA HAI ---
 import ForgotPassword from "./pages/ForgotPassword"; 
 import { MessageCircle, ShoppingCart, X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, CreditCard, User, MapPin } from 'lucide-react';
 import { Product, CartItem } from './types';
@@ -17,7 +16,12 @@ import ThemeToggle from "./components/ThemeToggle";
 import Layout from "./components/Layout";
 import Navbar from "./components/Navbar";
 
-// --- RAZORPAY SCRIPT LOADER ---
+// --- API URL CONFIGURATION ---
+// Ye line localhost aur Railway dono ko handle karegi
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+
+
 const loadRazorpay = () => {
   return new Promise((resolve) => {
     const script = document.createElement("script");
@@ -28,7 +32,6 @@ const loadRazorpay = () => {
   });
 };
 
-// --- UPGRADED CART SIDEBAR COMPONENT ---
 const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeItem, clearCart, cartTotal, user }: any) => {
   const navigate = useNavigate();
   const [step, setStep] = useState<'cart' | 'contact' | 'address'>('cart');
@@ -48,7 +51,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
 
   const handleProceedToCheckout = () => {
     const savedUser = localStorage.getItem("xob_user");
-    
     if (!savedUser) {
       alert("Please sign in to checkout.🛍️");
       setIsCartOpen(false);
@@ -170,21 +172,8 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
               
               {step === 'cart' && (
                 <div className="flex flex-col gap-3">
-                  <button 
-                    onClick={handleProceedToCheckout} 
-                    disabled={cart.length === 0}
-                    className="w-full py-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-black disabled:opacity-50 transition-all active:scale-95"
-                  >
-                    PROCEED TO CHECKOUT
-                  </button>
-
-                  <button 
-                    onClick={clearCart}
-                    disabled={cart.length === 0}
-                    className="w-full py-3 border-2 border-slate-100 dark:border-slate-800 text-slate-400 hover:text-red-500 hover:border-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-20"
-                  >
-                    <Trash2 size={18} /> CLEAR CART
-                  </button>
+                  <button onClick={handleProceedToCheckout} disabled={cart.length === 0} className="w-full py-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-black disabled:opacity-50 transition-all active:scale-95">PROCEED TO CHECKOUT</button>
+                  <button onClick={clearCart} disabled={cart.length === 0} className="w-full py-3 border-2 border-slate-100 dark:border-slate-800 text-slate-400 hover:text-red-500 hover:border-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-20"><Trash2 size={18} /> CLEAR CART</button>
                 </div>
               )}
 
@@ -343,19 +332,13 @@ function App() {
                     ))}
                   </div>
                 </section>
-                
                 <div id="contact" className="mt-20">
                   <ContactForm />
-                  <div className="md:hidden flex flex-col items-center gap-4 mt-12 pb-20 border-t dark:border-slate-800 pt-10">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Switch Appearance</p>
-                    <ThemeToggle />
-                  </div>
                 </div>
               </main>
             </div>
           } />
           <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-          {/* --- FORGOT PASSWORD ROUTE ADDED HERE --- */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/product/:id" element={<ProductPage onAddToCart={addToCart} />} />
           <Route path="/checkout" element={<CheckoutPage cart={cart} onClearCart={clearCart} />} />
