@@ -1,15 +1,13 @@
-// 1. App.tsx se API_URL import kiya taaki Vercel ke variables use ho sakein
 import { API_URL } from '../App'; 
 
 /**
  * SIGNUP FUNCTION
- * Naya user register karne ke liye
+ * Route: /api/signup (Server.js ke mutabik)
  */
 export const handleSignup = async (userData: { username?: string; fullName?: string; email: string; password: string }) => {
     try {
-        console.log("Connecting to:", `${API_URL}/signup`);
-
-        const response = await fetch(`${API_URL}/signup`, {
+        // Aapke server.js mein rasta '/api/signup' hai
+        const response = await fetch(`${API_URL}/api/signup`, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json" 
@@ -27,20 +25,19 @@ export const handleSignup = async (userData: { username?: string; fullName?: str
         console.error("Signup Error:", error);
         return { 
             success: false, 
-            message: "Server se connection nahi ho paya. Railway backend check karein!" 
+            message: "Server se connection nahi ho paya!" 
         };
     }
 };
 
 /**
  * LOGIN FUNCTION
- * User login handle karne ke liye
+ * Route: /api/login (Server.js ke mutabik)
  */
 export const handleLogin = async (credentials: { email: string; password: string }) => {
     try {
-        console.log("Attempting Login at:", `${API_URL}/login`);
-
-        const response = await fetch(`${API_URL}/login`, {
+        // Aapke server.js mein rasta '/api/login' hai
+        const response = await fetch(`${API_URL}/api/login`, {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json" 
@@ -51,7 +48,6 @@ export const handleLogin = async (credentials: { email: string; password: string
         const data = await response.json();
 
         if (response.ok) {
-            // Token aur user details save karna
             localStorage.setItem("token", data.token);
             localStorage.setItem("user", JSON.stringify(data.user));
             return { 
@@ -68,7 +64,7 @@ export const handleLogin = async (credentials: { email: string; password: string
         console.error("Login Error:", error);
         return { 
             success: false, 
-            message: "Server is down. Vercel Settings mein Variable check karein!" 
+            message: "Server Down! API URL check karein." 
         };
     }
 };
