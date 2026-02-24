@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
-// File path ko check kar lena bhai, 'lib' folder ke andar 'supabase.ts' honi chahiye
 import { supabase } from '../lib/supabase'; 
 
 const ForgotPassword = () => {
@@ -16,39 +15,37 @@ const ForgotPassword = () => {
     setLoading(true);
     
     try {
-      // --- LOGIC START: Check if user exists in your data ---
-      // Hum 'users' table (ya jo bhi aapka profile table hai) se email check kar rahe hain
-      const { data, error: userError } = await supabase
-        .from('profiles') // AGAR TABLE NAAM ALAG HAI TOH YAHAN CHANGE KAREIN (e.g., 'users')
-        .select('email')
-        .eq('email', email)
-        .maybeSingle();
+      // 1. Sabse pehle hum check karenge ki user register hai ya nahi
+      // Humein 'auth' schema se data check karne ke liye is method ka use karna chahiye
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: false, // Yeh sabse important hai, agar user nahi hoga toh error dega
+        },
+      });
 
-      if (userError) {
-        alert("Database connection error: " + userError.message);
-        setLoading(false);
-        return;
+      // Agar user nahi mila, toh Supabase error dega: "Signups not allowed for this helper" ya "User not found"
+      if (signInError) {
+        // Specific check for user not existing
+        if (signInError.message.toLowerCase().includes("not allowed") || signInError.message.toLowerCase().includes("not found")) {
+          alert("Bhai, ye email hamare record mein nahi hai. Pehle register karo!");
+          setLoading(false);
+          return;
+        }
       }
 
-      if (!data) {
-        alert("Bhai, ye email hamare record mein nahi hai. Pehle register karo!");
-        setLoading(false);
-        return;
-      }
-      // --- LOGIC END ---
-
-      // Agar user mil gaya, tabhi reset link bhejenge
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // 2. Agar user mil gaya, toh password reset link bhejenge
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
-      if (error) {
-        alert("Error: " + error.message);
+      if (resetError) {
+        alert("Error: " + resetError.message);
       } else {
         setMessage("Bhai, reset link bhej diya hai! Spam folder check karna mat bhoolna. 📧");
       }
     } catch (err) {
-      alert("Kuch gadbad ho gayi, firse try karo.");
+      alert("Kuch technical issue hai, baad mein try karein.");
     } finally {
       setLoading(false);
     }
@@ -74,7 +71,7 @@ const ForgotPassword = () => {
                 />
               </div>
               <button disabled={loading} className="w-full py-4 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50">
-                {loading ? "SENDING..." : "SEND RESET LINK"}
+                {loading ? "CHECKING & SENDING..." : "SEND RESET LINK"}
               </button>
             </form>
           </>
