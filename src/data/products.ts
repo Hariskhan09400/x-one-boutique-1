@@ -18,7 +18,7 @@ export const products: Product[] = [
     id: 'ts2',
     name: 'Black Oversized Street Tee',
     category: 'T-Shirts',
-    price: 749,
+    price: 0.9,
     description: 'Urban streetwear style with premium fit.',
     images: [
       '/images/Dcompany.jpeg',
