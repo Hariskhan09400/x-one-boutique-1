@@ -17,8 +17,7 @@ import Layout from "./components/Layout";
 import Navbar from "./components/Navbar";
 
 // --- API URL CONFIGURATION ---
-// Ye line localhost aur Railway dono ko handle karegi
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+export const API_URL = import.meta.env.VITE_API_URL || "https://x-one-boutique-backend-production.up.railway.app";
 
 
 
