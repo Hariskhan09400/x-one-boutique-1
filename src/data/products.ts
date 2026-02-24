@@ -7,7 +7,7 @@ export const products: Product[] = [
     id: 'ts1',
     name: 'Essential White Cotton Tee',
     category: 'T-Shirts',
-    price: 599,
+    price: 1,
     description: 'Premium 100% cotton fabric with superior comfort.',
     images: [
       '/images/rahil.jpeg',
