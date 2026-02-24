@@ -15,17 +15,43 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     
-    // Yahan origin localhost:5173 lega automatic
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      // --- LOGIC START: Check if user exists in your data ---
+      // Hum 'users' table (ya jo bhi aapka profile table hai) se email check kar rahe hain
+      const { data, error: userError } = await supabase
+        .from('profiles') // AGAR TABLE NAAM ALAG HAI TOH YAHAN CHANGE KAREIN (e.g., 'users')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle();
 
-    if (error) {
-      alert("Error: " + error.message);
-    } else {
-      setMessage("Bhai, reset link bhej diya hai! Spam folder check karna mat bhoolna. 📧");
+      if (userError) {
+        alert("Database connection error: " + userError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        alert("Bhai, ye email hamare record mein nahi hai. Pehle register karo!");
+        setLoading(false);
+        return;
+      }
+      // --- LOGIC END ---
+
+      // Agar user mil gaya, tabhi reset link bhejenge
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        alert("Error: " + error.message);
+      } else {
+        setMessage("Bhai, reset link bhej diya hai! Spam folder check karna mat bhoolna. 📧");
+      }
+    } catch (err) {
+      alert("Kuch gadbad ho gayi, firse try karo.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
