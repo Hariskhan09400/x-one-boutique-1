@@ -17,6 +17,8 @@ import { ContactForm } from './components/ContactForm';
 import ThemeToggle from "./components/ThemeToggle";
 import Layout from "./components/Layout";
 import Navbar from "./components/Navbar";
+// --- NEW IMPORT ---
+import { supabase } from "./lib/supabase"; 
 
 export const API_URL = import.meta.env.VITE_API_URL || "https://x-one-boutique-backend-production.up.railway.app";
 
@@ -51,7 +53,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     const savedUser = localStorage.getItem("xob_user");
     
     if (!savedUser) {
-      // UPGRADED: Working Cross Button + 3s Auto-hide
       toast.custom((t) => (
         <div 
           className={`${
@@ -74,12 +75,10 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
             </div>
           </div>
           <div className="ml-4 flex-shrink-0 flex">
-            {/* FIX: Is button pe click karte hi popup band hoga */}
-<button 
+            <button 
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // dismiss se halka sa (0.1s) animation milta hai jo 'remove' se better lagta hai
                 toast.dismiss(t.id); 
               }} 
               className="rounded-md inline-flex text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors p-1 active:scale-90"
@@ -90,7 +89,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
         </div>
       ), { 
         id: 'signin-error',
-        duration: 2100 // 3 seconds baad apne aap hat jayega
+        duration: 2100 
       });
       
       setIsCartOpen(false);
@@ -100,41 +99,100 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     setStep('contact');
   };
 
+  // --- UPGRADED ONLINE PAYMENT (Now Saves to DB) ---
   const handleOnlinePayment = async () => {
     const res = await loadRazorpay();
     if (!res) return toast.error("Razorpay SDK failed to load! ❌");
     
-    const options = {
-      key: "rzp_live_SJYY3uYtuUcaHe", 
-      amount: cartTotal * 100, 
-      currency: "INR",
-      name: "X ONE BOUTIQUE",
-      description: `Order Checkout (${cart.length} items)`,
-      prefill: { name: formData.fullName, email: formData.email, contact: formData.phone },
-      notes: { address: `${formData.address}, ${formData.city} - ${formData.pincode}` },
-      theme: { color: "#2563eb" },
-      handler: function (response: any) {
-        toast.success("Payment Successful! 🎉");
-        clearCart();
-        setIsCartOpen(false);
-        navigate("/");
-      },
-    };
-    const rzp = new (window as any).Razorpay(options);
-    rzp.open();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return toast.error("Bhai, login session expire ho gaya!");
+
+      // 1. Save to Supabase first
+      const { data: orderData, error: dbError } = await supabase
+        .from("orders")
+        .insert([{
+          user_id: session.user.id,
+          full_name: formData.fullName,
+          phone: formData.phone,
+          address: `${formData.address}, ${formData.landmark}`,
+          city: formData.city,
+          pincode: formData.pincode,
+          total_amount: cartTotal,
+          items: cart,
+          status: 'awaiting_payment'
+        }])
+        .select();
+
+      if (dbError) throw dbError;
+      const orderId = orderData[0].id;
+
+      // 2. Open Razorpay
+      const options = {
+        key: "rzp_live_SJYY3uYtuUcaHe",
+        amount: cartTotal * 100, 
+        currency: "INR",
+        name: "X ONE BOUTIQUE",
+        description: `Order Checkout (${cart.length} items)`,
+        prefill: { name: formData.fullName, email: formData.email, contact: formData.phone },
+        notes: { address: `${formData.address}, ${formData.city} - ${formData.pincode}` },
+        theme: { color: "#2563eb" },
+        handler: async function (response: any) {
+          // 3. Update status on success
+          await supabase
+            .from("orders")
+            .update({ 
+              status: "paid", 
+              razorpay_order_id: response.razorpay_payment_id 
+            })
+            .eq("id", orderId);
+
+          toast.success("Payment Successful! 🎉");
+          clearCart();
+          setIsCartOpen(false);
+          navigate("/");
+        },
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      toast.error("Order save nahi hua: " + err.message);
+    }
   };
 
-  const handleWhatsAppOrder = () => {
+  // --- UPGRADED WHATSAPP ORDER (Now Saves to DB) ---
+  const handleWhatsAppOrder = async () => {
     if (!formData.phone || !formData.address || !formData.fullName) {
       toast.error("Bhai, pehle details toh bharo! 📍");
       return;
     }
-    const itemsList = cart.map((item: any) => `• ${item.name} (x${item.quantity}) - ₹${item.price * item.quantity}`).join('%0A');
-    const message = `*NEW COD ORDER - X ONE BOUTIQUE*%0A%0A*Customer:* ${formData.fullName}%0A*Phone:* ${formData.phone}%0A*Address:* ${formData.address}, ${formData.landmark}, ${formData.city} - ${formData.pincode}%0A%0A*Items:*%0A${itemsList}%0A%0A*Total Amount: ₹${cartTotal}*`;
-    window.open(`https://wa.me/917208428589?text=${message}`, "_blank");
-    clearCart();
-    setIsCartOpen(false);
-    navigate("/");
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Save order in DB as 'pending' (COD)
+      await supabase.from("orders").insert([{
+        user_id: session?.user.id,
+        full_name: formData.fullName,
+        phone: formData.phone,
+        address: `${formData.address}, ${formData.landmark}`,
+        city: formData.city,
+        pincode: formData.pincode,
+        total_amount: cartTotal,
+        items: cart,
+        status: 'pending'
+      }]);
+
+      const itemsList = cart.map((item: any) => `• ${item.name} (x${item.quantity}) - ₹${item.price * item.quantity}`).join('%0A');
+      const message = `*NEW COD ORDER - X ONE BOUTIQUE*%0A%0A*Customer:* ${formData.fullName}%0A*Phone:* ${formData.phone}%0A*Address:* ${formData.address}, ${formData.landmark}, ${formData.city} - ${formData.pincode}%0A%0A*Items:*%0A${itemsList}%0A%0A*Total Amount: ₹${cartTotal}*`;
+      
+      window.open(`https://wa.me/917208428589?text=${message}`, "_blank");
+      clearCart();
+      setIsCartOpen(false);
+      navigate("/");
+    } catch (err: any) {
+      toast.error("DB Sync failed but WhatsApp opening...");
+    }
   };
 
   return (
