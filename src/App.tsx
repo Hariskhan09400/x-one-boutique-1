@@ -49,6 +49,53 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     if (!isCartOpen) setTimeout(() => setStep('cart'), 300);
   }, [isCartOpen]);
 
+  // --- UPGRADED VALIDATION LOGIC ---
+  const validateAddressData = () => {
+    const { pincode, city, fullName, address, landmark } = formData;
+
+    if (!pincode) { toast.error("Please enter your PIN code"); return false; }
+    if (pincode.length !== 6) { toast.error("Please enter a valid 6-digit PIN code.❌"); return false; }
+    
+    if (!city) { toast.error("Please enter your city"); return false; }
+    // City logic: Max 19 characters, no specific error message for length
+    if (city.length > 19) return false; 
+
+    if (!fullName) { toast.error("Please enter your full name."); return false; }
+    if (!address) { toast.error("Please enter your address."); return false; }
+    if (!landmark) { toast.error("Please provide a nearby landmark for easier delivery."); return false; }
+
+    return true;
+  };
+
+  const handleContinueToAddress = () => {
+    const { phone, email } = formData;
+    const phoneRegex = /^[0-9]{10}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!phone && !email) {
+      toast.error("Contact info is required to continue");
+      return;
+    }
+    if (!phone) {
+      toast.error("Phone number is required");
+      return;
+    }
+    if (!phoneRegex.test(phone)) {
+      toast.error("Please enter a valid 10-digit phone number❌");
+      return;
+    }
+    if (!email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+    if (!emailRegex.test(email)) {
+      toast.error("Invalid email format.");
+      return;
+    }
+
+    setStep('address');
+  };
+
   const handleProceedToCheckout = () => {
     const savedUser = localStorage.getItem("xob_user");
     
@@ -99,8 +146,9 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     setStep('contact');
   };
 
-  // --- UPGRADED ONLINE PAYMENT (Now Saves to DB) ---
   const handleOnlinePayment = async () => {
+    if (!validateAddressData()) return;
+
     const res = await loadRazorpay();
     if (!res) return toast.error("Razorpay SDK failed to load! ❌");
     
@@ -108,7 +156,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return toast.error("Bhai, login session expire ho gaya!");
 
-      // 1. Save to Supabase first
       const { data: orderData, error: dbError } = await supabase
         .from("orders")
         .insert([{
@@ -127,7 +174,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
       if (dbError) throw dbError;
       const orderId = orderData[0].id;
 
-      // 2. Open Razorpay
       const options = {
         key: "rzp_live_SJYY3uYtuUcaHe",
         amount: cartTotal * 100, 
@@ -138,7 +184,6 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
         notes: { address: `${formData.address}, ${formData.city} - ${formData.pincode}` },
         theme: { color: "#2563eb" },
         handler: async function (response: any) {
-          // 3. Update status on success
           await supabase
             .from("orders")
             .update({ 
@@ -160,17 +205,12 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     }
   };
 
-  // --- UPGRADED WHATSAPP ORDER (Now Saves to DB) ---
   const handleWhatsAppOrder = async () => {
-    if (!formData.phone || !formData.address || !formData.fullName) {
-      toast.error("Bhai, pehle details toh bharo! 📍");
-      return;
-    }
+    if (!validateAddressData()) return;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Save order in DB as 'pending' (COD)
       await supabase.from("orders").insert([{
         user_id: session?.user.id,
         full_name: formData.fullName,
@@ -180,7 +220,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
         pincode: formData.pincode,
         total_amount: cartTotal,
         items: cart,
-        status: 'pending'
+        status: 'COD'
       }]);
 
       const itemsList = cart.map((item: any) => `• ${item.name} (x${item.quantity}) - ₹${item.price * item.quantity}`).join('%0A');
@@ -202,7 +242,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
           <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col">
             <div className="p-6 border-b dark:border-slate-800 flex items-center justify-between">
-              <button onClick={() => step === 'address' ? setStep('contact') : step === 'contact' ? setStep('cart') : setIsCartOpen(false)} className="text-slate-400 hover:text-blue-600">
+              <button onClick={() => step === 'address' ? setStep('contact') : step === 'contact' ? setStep('cart') : setIsCartOpen(false)} className="text-slate-400 hover:text-blue-600 transition-all">
                 <ArrowRight size={22} className="rotate-180" />
               </button>
               <div className="flex gap-2">
@@ -245,20 +285,45 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
               {step === 'contact' && (
                 <div className="space-y-6">
                   <div className="text-center py-4"><User className="mx-auto text-blue-600 mb-2" /><h3 className="font-black uppercase">Contact Info</h3></div>
-                  <input type="tel" placeholder="Mobile Number" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-                  <input type="email" placeholder="Email Address" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+                  <input 
+                    type="tel" 
+                    placeholder="Mobile Number (10 Digits)" 
+                    maxLength={10}
+                    className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-600" 
+                    value={formData.phone} 
+                    onChange={(e) => setFormData({...formData, phone: e.target.value.replace(/\D/g, '')})} 
+                  />
+                  <input 
+                    type="email" 
+                    placeholder="Email Address" 
+                    className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-600" 
+                    value={formData.email} 
+                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                  />
                 </div>
               )}
               {step === 'address' && (
                 <div className="space-y-4">
                   <div className="text-center py-4"><MapPin className="mx-auto text-blue-600 mb-2" /><h3 className="font-black uppercase">Shipping Address</h3></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <input placeholder="Pincode" className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value={formData.pincode} onChange={(e) => setFormData({...formData, pincode: e.target.value})} />
-                    <input placeholder="City" className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} />
+                    <input 
+                      placeholder="Pincode" 
+                      maxLength={6}
+                      className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-600" 
+                      value={formData.pincode} 
+                      onChange={(e) => setFormData({...formData, pincode: e.target.value.replace(/\D/g, '')})} 
+                    />
+                    <input 
+                      placeholder="City" 
+                      maxLength={19}
+                      className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-600" 
+                      value={formData.city} 
+                      onChange={(e) => setFormData({...formData, city: e.target.value})} 
+                    />
                   </div>
-                  <input placeholder="Full Name" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} />
-                  <textarea placeholder="Address Detail" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none h-20" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-                  <input placeholder="Landmark" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none" value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} />
+                  <input placeholder="Full Name" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-600" value={formData.fullName} onChange={(e) => setFormData({...formData, fullName: e.target.value})} />
+                  <textarea placeholder="Address Detail" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none h-20 focus:ring-2 focus:ring-blue-600" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+                  <input placeholder="Landmark" className="w-full p-4 rounded-xl bg-slate-100 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-600" value={formData.landmark} onChange={(e) => setFormData({...formData, landmark: e.target.value})} />
                 </div>
               )}
             </div>
@@ -276,11 +341,11 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
                 </div>
               )}
 
-              {step === 'contact' && <button onClick={() => formData.phone ? setStep('address') : toast.error("Phone number toh daalo!")} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black">CONTINUE TO ADDRESS</button>}
+              {step === 'contact' && <button onClick={handleContinueToAddress} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black transition-all active:scale-95">CONTINUE TO ADDRESS</button>}
               {step === 'address' && (
                 <div className="space-y-3">
-                  <button onClick={handleOnlinePayment} className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-2"><CreditCard size={18} /> PAY ONLINE</button>
-                  <button onClick={handleWhatsAppOrder} className="w-full py-4 border-2 border-green-600 text-green-600 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-green-50"><MessageCircle size={18} /> ORDER VIA WHATSAPP (COD)</button>
+                  <button onClick={handleOnlinePayment} className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-2 transition-all active:scale-95"><CreditCard size={18} /> PAY ONLINE</button>
+                  <button onClick={handleWhatsAppOrder} className="w-full py-4 border-2 border-green-600 text-green-600 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-green-50 transition-all active:scale-95"><MessageCircle size={18} /> ORDER VIA WHATSAPP (COD)</button>
                 </div>
               )}
             </div>
@@ -465,7 +530,7 @@ function App() {
           <Route path="/checkout" element={<CheckoutPage cart={cart} onClearCart={clearCart} />} />
         </Routes>
 
-        <a href="https://wa.me/917208428589" className="fixed left-3 bottom-4 z-50 bg-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-110">
+        <a href="https://wa.me/917208428589" className="fixed left-3 bottom-4 z-50 bg-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all">
           <MessageCircle size={24} />
         </a>
         
