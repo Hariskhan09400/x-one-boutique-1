@@ -411,11 +411,44 @@ function App() {
     toast.success(`Welcome back, ${userData.name}!`);
   };
 
+ // --- UPGRADED LOGOUT WITH MODAL ---
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
   const handleLogout = () => {
+    if (!isLogoutModalOpen) {
+      setIsLogoutModalOpen(true);
+      return;
+    }
+    // Asli Logout yahan hoga
     setUser(null);
     localStorage.removeItem("xob_user");
     toast.success("Logged out successfully");
+    setIsLogoutModalOpen(false);
   };
+
+  // Ye chhota sa component bhi isi ke neeche rakh de taaki confirm box dikhe
+  const LogoutConfirmationUI = () => (
+    <AnimatePresence>
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsLogoutModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[28px] shadow-2xl p-8 border border-slate-100 dark:border-slate-800">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl"><AlertCircle className="text-amber-500" size={28} /></div>
+              <div className="flex-1">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase italic">Logout Confirmation</h3>
+                <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm font-bold">Are you sure you want to do logout?</p>
+              </div>
+            </div>
+            <div className="mt-8 flex gap-3">
+              <button onClick={handleLogout} className="flex-1 py-4 bg-[#0284c7] text-white font-black rounded-2xl transition-all active:scale-95 shadow-lg shadow-blue-500/30 uppercase text-xs">Confirm</button>
+              <button onClick={() => setIsLogoutModalOpen(false)} className="flex-1 py-4 border-2 border-slate-100 dark:border-slate-800 text-slate-400 font-black rounded-2xl transition-all active:scale-95 uppercase text-xs">Cancel</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
 
   useEffect(() => {
     localStorage.setItem("xob_cart", JSON.stringify(cart));
@@ -510,7 +543,7 @@ function App() {
       <Layout cartItemCount={cartItemCount} onCartOpen={() => setIsCartOpen(true)}>
         <Navbar 
           user={user}
-          onLogout={handleLogout}
+          onLogout={() => setIsLogoutModalOpen(true)}
           cartItemCount={cartItemCount} 
           onCartOpen={() => setIsCartOpen(true)}
           onShopClick={() => handleCategoryClick(null)}
@@ -570,6 +603,7 @@ function App() {
 
         <CartSidebar isCartOpen={isCartOpen} setIsCartOpen={setIsCartOpen} cart={cart} updateQuantity={updateQuantity} removeItem={removeItem} clearCart={clearCart} cartTotal={cartTotal} user={user} />
         {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />}
+          <LogoutConfirmationUI />
       </Layout>
     </Router>
   );
