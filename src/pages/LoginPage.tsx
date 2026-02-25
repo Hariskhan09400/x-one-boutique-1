@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast'; 
 import { handleLogin, handleSignup, handleForgotPassword } from "../utils/auth"; 
 import { supabase } from "../lib/supabase"; 
+import confetti from 'canvas-confetti'; 
 
 interface LoginPageProps {
   onLogin: (userData: { name: string; email: string }) => void;
@@ -16,39 +17,68 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [name, setName] = useState(""); 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // --- NEW STATE FOR DESKTOP SHAKE ---
+  const [isShaking, setIsShaking] = useState(false);
+
   const navigate = useNavigate();
+  const AUTH_TOAST_ID = "auth-action-toast";
+
+  // --- UPGRADED FEATURE: VISUAL SHAKE + MOBILE VIBRATE ---
+  const triggerBawalSuccess = () => {
+    // 1. Mobile Vibration (Asli wala jhatka)
+    if ("vibrate" in navigator) {
+      navigator.vibrate([100, 50, 100]); 
+    }
+
+    // 2. Desktop Shake (Visual jhatka)
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+
+    // 3. Confetti Boom
+    const scalar = 2;
+    const items = [
+      confetti.shapeFromText({ text: '🛍️', scalar }),
+      confetti.shapeFromText({ text: '✨', scalar })
+    ];
+
+    confetti({
+      shapes: items,
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#2563eb', '#06b6d4', '#ffffff']
+    });
+  };
 
   const loginWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
+        options: { redirectTo: window.location.origin },
       });
       if (error) throw error;
     } catch (err: any) {
-      toast.error(err.message || "Google Login failed!");
+      toast.error(err.message || "Google Login failed!", { id: AUTH_TOAST_ID });
     }
   };
 
   const onForgotPasswordClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Please enter your email address first!");
+      toast.error("Please enter your email address first!", { id: AUTH_TOAST_ID });
       return;
     }
-
-    const loadingToast = toast.loading("Sending reset link...");
+    toast.loading("Sending reset link...", { id: AUTH_TOAST_ID });
     try {
       const result = await handleForgotPassword(email);
       if (result.success) {
-        toast.success("Reset link sent! Check email. 📧", { id: loadingToast });
+        toast.success("Reset link sent! Check email. 📧", { id: AUTH_TOAST_ID });
       } else {
-        toast.error(result.message || "Failed to send link", { id: loadingToast });
+        toast.error(result.message || "Failed to send link", { id: AUTH_TOAST_ID });
       }
     } catch (err) {
-      toast.error("Something went wrong!", { id: loadingToast });
+      toast.error("Something went wrong!", { id: AUTH_TOAST_ID });
     }
   };
 
@@ -58,11 +88,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         .from('profiles') 
         .select('email')
         .eq('email', userEmail.trim().toLowerCase());
-      
-      if (error) {
-        console.error("DB Check Error:", error);
-        return false;
-      }
+      if (error) return false;
       return data && data.length > 0;
     } catch (err) {
       return false;
@@ -73,40 +99,59 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     e.preventDefault();
     if (isLoading) return; 
     
+    if (!isLogin && password.length < 6) {
+      toast.error("Password must be at least 6 characters.", { id: AUTH_TOAST_ID });
+      return;
+    }
+
     setIsLoading(true);
-    const loadingToast = toast.loading(isLogin ? "Authenticating..." : "Creating account...");
+    toast.loading(isLogin ? "Authenticating..." : "Creating account...", { id: AUTH_TOAST_ID });
 
     try {
       if (isLogin) {
         const result = await handleLogin({ email, password });
         if (result.success) {
-          toast.success("Welcome back! 🎉", { id: loadingToast });
-          onLogin({ name: result.user.username, email: result.user.email });
-          navigate("/");
+          // --- TRIGGER SHAKE & VIBRATE ---
+          triggerBawalSuccess(); 
+
+          toast.success(
+            <div className="flex flex-col">
+              <span className="font-bold text-lg">Login Successfully! ✅</span>
+              <span className="text-sm">Welcome to X One Boutique</span>
+            </div>, 
+            { id: AUTH_TOAST_ID, duration: 4000 }
+          );
+
+          setTimeout(() => {
+            onLogin({ name: result.user.username, email: result.user.email });
+            navigate("/");
+          }, 1500);
+
         } else {
-          toast.error("Invalid email or password.", { id: loadingToast });
+          // Error par chhota sa vibration jhatka (Mobile Only)
+          if ("vibrate" in navigator) navigator.vibrate(50);
+          toast.error("Invalid email or password.", { id: AUTH_TOAST_ID });
         }
       } else {
         const alreadyExists = await checkIfEmailExists(email);
-        
         if (alreadyExists) {
-          toast.error("Bhai, ye email pehle se hai. Login karo!", { id: loadingToast });
+          toast.error("Email already registered.", { id: AUTH_TOAST_ID });
           setIsLoading(false);
           return;
         }
 
         const result = await handleSignup({ username: name, email, password });
         if (result.success) {
-          toast.success("Account created! Please login.", { id: loadingToast });
+          triggerBawalSuccess();
+          toast.success("Account created! Please login.", { id: AUTH_TOAST_ID });
           setIsLogin(true);
           setName(""); 
         } else {
-          toast.error(result.message || "Signup failed", { id: loadingToast });
+          toast.error(result.message || "Signup failed", { id: AUTH_TOAST_ID });
         }
       }
     } catch (err) {
-      console.error("Submit Error:", err);
-      toast.error("Connection error. Try again.", { id: loadingToast });
+      toast.error("Connection error. Try again.", { id: AUTH_TOAST_ID });
     } finally {
       setIsLoading(false);
     }
@@ -114,10 +159,26 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-900/20 flex items-center justify-center px-4 py-12 transition-colors duration-500">
-      <div className="max-w-md w-full space-y-8">
+      
+      {/* --- DESKTOP SHAKE ANIMATION CSS --- */}
+      <style>{`
+        @keyframes bawal-vibrate {
+          0% { transform: translate(0); }
+          20% { transform: translate(-3px, 3px); }
+          40% { transform: translate(-3px, -3px); }
+          60% { transform: translate(3px, 3px); }
+          80% { transform: translate(3px, -3px); }
+          100% { transform: translate(0); }
+        }
+        .animate-bawal-vibrate {
+          animation: bawal-vibrate 0.3s linear infinite;
+        }
+      `}</style>
+
+      <div className={`max-w-md w-full space-y-8 transition-all duration-300 ${isShaking ? 'animate-bawal-vibrate scale-105' : ''}`}>
         
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl mb-6">
+          <div className="mx-auto h-20 w-20 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl mb-6 transform hover:rotate-12 transition-transform cursor-pointer">
             <UserIcon className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">
@@ -204,7 +265,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               <div className="flex-1 border-t border-slate-200 dark:border-slate-700"></div>
             </div>
 
-            {/* --- FIXED GOOGLE BUTTON WITH SVG ICON --- */}
             <button
               type="button"
               onClick={loginWithGoogle}

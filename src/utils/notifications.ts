@@ -11,7 +11,7 @@ export const showOrderSuccessToast = (paymentId: string) => {
       className={`${
         t.visible ? 'animate-in fade-in zoom-in duration-300' : 'animate-out fade-out zoom-out duration-300'
       } max-w-sm w-full bg-[#0f0f0f] border-2 border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.3)] rounded-2xl pointer-events-auto flex overflow-hidden`}
-    >
+    >                                                                       //yeh sab code app.tsx se direk hogaya hai abb isksa mtlb nahi hai 
       <div className="flex-1 w-0 p-4">
         <div className="flex items-start">
           <div className="flex-shrink-0 pt-0.5">
