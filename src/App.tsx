@@ -17,7 +17,7 @@ import { ContactForm } from './components/ContactForm';
 import ThemeToggle from "./components/ThemeToggle";
 import Layout from "./components/Layout";
 import Navbar from "./components/Navbar";
-// --- NEW IMPORT ---
+import { showOrderSuccessToast } from "../utils/notifications"; // Import
 import { supabase } from "./lib/supabase"; 
 
 export const API_URL = import.meta.env.VITE_API_URL || "https://x-one-boutique-backend-production.up.railway.app";
@@ -146,7 +146,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     setStep('contact');
   };
 
-  const handleOnlinePayment = async () => {
+const handleOnlinePayment = async () => {
     if (!validateAddressData()) return;
 
     const res = await loadRazorpay();
@@ -184,6 +184,7 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
         notes: { address: `${formData.address}, ${formData.city} - ${formData.pincode}` },
         theme: { color: "#2563eb" },
         handler: async function (response: any) {
+          // --- DB UPDATE ---
           await supabase
             .from("orders")
             .update({ 
@@ -192,7 +193,35 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
             })
             .eq("id", orderId);
 
-          toast.success("Payment Successful! 🎉");
+          // --- 1. PLAY SUCCESS SOUND ---
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+          audio.play().catch(e => console.log("Sound error:", e));
+
+          // --- 2. PREMIUM GOLD NOTIFICATION ---
+          toast.custom((t) => (
+            <div className={`${t.visible ? 'animate-in fade-in zoom-in' : 'animate-out fade-out zoom-out'} max-w-sm w-full bg-[#0a0a0a] border-2 border-amber-500 shadow-[0_0_25px_rgba(245,158,11,0.4)] rounded-2xl pointer-events-auto flex overflow-hidden ring-1 ring-black ring-opacity-5`}>
+              <div className="flex-1 w-0 p-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 pt-0.5">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-amber-600 to-amber-300 flex items-center justify-center border border-amber-400/50">
+                      <span className="text-white font-black text-[10px]">X1</span>
+                    </div>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest italic mb-1">From X-One Boutique</p>
+                    <p className="text-sm font-bold text-white leading-tight">Order Placed Successfully! 🛍️</p>
+                    <p className="mt-1 text-[10px] text-slate-400 font-medium italic">Payment confirmed. Your style is on its way!</p>
+                    <p className="mt-2 text-[8px] font-mono text-amber-500/60 uppercase">Payment ID: {response.razorpay_payment_id.substring(0,14)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex border-l border-white/5">
+                <button onClick={() => toast.dismiss(t.id)} className="px-4 text-[10px] font-black text-amber-500 uppercase hover:bg-amber-500/5 transition-all">CLOSE</button>
+              </div>
+            </div>
+          ), { duration: 6000, position: 'top-center' });
+
+          // --- 3. CLEANUP & NAVIGATE ---
           clearCart();
           setIsCartOpen(false);
           navigate("/");
