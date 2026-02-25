@@ -52,7 +52,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
   };
 
-  // --- FIX: Optimized Email Check ---
   const checkIfEmailExists = async (userEmail: string) => {
     try {
       const { data, error } = await supabase
@@ -60,7 +59,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         .select('email')
         .eq('email', userEmail.trim().toLowerCase());
       
-      // Agar error hai toh console mein dekh sakein
       if (error) {
         console.error("DB Check Error:", error);
         return false;
@@ -73,14 +71,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return; // Prevent double clicks
+    if (isLoading) return; 
     
     setIsLoading(true);
     const loadingToast = toast.loading(isLogin ? "Authenticating..." : "Creating account...");
 
     try {
       if (isLogin) {
-        // LOGIN LOGIC
         const result = await handleLogin({ email, password });
         if (result.success) {
           toast.success("Welcome back! 🎉", { id: loadingToast });
@@ -90,8 +87,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           toast.error("Invalid email or password.", { id: loadingToast });
         }
       } else {
-        // SIGNUP LOGIC
-        // 1. First check if email is already there
         const alreadyExists = await checkIfEmailExists(email);
         
         if (alreadyExists) {
@@ -100,12 +95,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           return;
         }
 
-        // 2. If not, proceed with signup
         const result = await handleSignup({ username: name, email, password });
         if (result.success) {
           toast.success("Account created! Please login.", { id: loadingToast });
           setIsLogin(true);
-          setName(""); // Reset name
+          setName(""); 
         } else {
           toast.error(result.message || "Signup failed", { id: loadingToast });
         }
@@ -122,7 +116,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-900/20 flex items-center justify-center px-4 py-12 transition-colors duration-500">
       <div className="max-w-md w-full space-y-8">
         
-        {/* HEADER */}
         <div className="text-center">
           <div className="mx-auto h-20 w-20 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl mb-6">
             <UserIcon className="w-10 h-10 text-white" />
@@ -135,7 +128,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </p>
         </div>
 
-        {/* FORM */}
         <div className="mt-8 bg-white dark:bg-slate-800/40 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-200 dark:border-slate-700">
           <form className="space-y-5" onSubmit={handleSubmit}>
             {!isLogin && (
@@ -212,12 +204,18 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               <div className="flex-1 border-t border-slate-200 dark:border-slate-700"></div>
             </div>
 
+            {/* --- FIXED GOOGLE BUTTON WITH SVG ICON --- */}
             <button
               type="button"
               onClick={loginWithGoogle}
-              className="w-full flex items-center justify-center gap-3 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm"
+              className="w-full flex items-center justify-center gap-3 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm active:scale-[0.98]"
             >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/icon_google.svg" alt="G" className="w-5 h-5" />
+              <svg className="w-5 h-5" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
+                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
+                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
+                <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
+              </svg>
               Continue with Google
             </button>
           </form>
