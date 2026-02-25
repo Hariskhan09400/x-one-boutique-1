@@ -13,6 +13,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.48.4",
+    "canvas-confetti": "^1.9.3",
     "framer-motion": "^12.4.7",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
+    "@types/canvas-confetti": "^1.6.4",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
