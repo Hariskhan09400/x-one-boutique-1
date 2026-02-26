@@ -1,170 +1,284 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase'; 
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 interface Review {
   id: number;
   username: string;
   rating: number;
   comment: string;
-  user_id: string; 
+  user_id: string;
   created_at: string;
 }
 
 const ReviewSection = ({ productId }: { productId: string }) => {
+  const navigate = useNavigate();
+
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [visibleCount, setVisibleCount] = useState(3);
   const [comment, setComment] = useState("");
-  const [rating, setRating] = useState(1); // Default 1 star kar diya hai
+  const [rating, setRating] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
+  // ================= DATE FORMAT =================
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",   // 🔥 IMPORTANT FIX
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+};
+  // ================= AUTH SYNC =================
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      setCurrentUser(data.session?.user ?? null);
     };
-    fetchUser();
+
+    checkUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setCurrentUser(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
+  // ================= LOAD REVIEWS =================
   const loadReviews = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('product_id', productId)
-        .order('created_at', { ascending: false });
+    const { data } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setReviews(data || []);
-    } catch (err) {
-      console.error("Reviews load error:", err);
-    }
+    setReviews(data || []);
   };
 
-  useEffect(() => { loadReviews(); }, [productId]);
+  useEffect(() => {
+    loadReviews();
+  }, [productId]);
 
+  // ================= POST REVIEW =================
   const handlePost = async () => {
-    if (!comment.trim()) return;
     if (!currentUser) {
-      toast.error("Bhai pehle Login toh kar lo! ❌");
+      toast.error("Please login first.");
+      navigate("/login");
       return;
     }
 
+    if (!comment.trim()) return;
+
     setIsSubmitting(true);
-    try {
-      const { error } = await supabase.from('reviews').insert([{
+
+    const { error } = await supabase.from("reviews").insert([
+      {
         product_id: productId,
         user_id: currentUser.id,
-        username: currentUser.user_metadata?.username || currentUser.email?.split('@')[0],
-        rating: rating,
-        comment: comment.trim()
-      }]);
-      if (error) throw error;
-      toast.success("Review post ho gaya! 🔥");
-      setComment(""); setRating(1); loadReviews(); // Reset to 1 star
-    } catch (err: any) {
-      toast.error("Review post nahi hua!");
-    } finally {
-      setIsSubmitting(false);
+        username:
+          currentUser.user_metadata?.username ||
+          currentUser.email?.split("@")[0],
+        rating,
+        comment: comment.trim(),
+      },
+    ]);
+
+    if (error) toast.error("Failed to post review.");
+    else {
+      toast.success("Review posted!");
+      setComment("");
+      setRating(1);
+      loadReviews();
     }
+
+    setIsSubmitting(false);
   };
 
-  const confirmDelete = async (id: number) => {
-    try {
-      const { error } = await supabase.from('reviews').delete().eq('id', id);
-      if (error) throw error;
-      toast.success("Review uda diya gaya! 👋");
-      loadReviews();
-    } catch (err) {
-      toast.error("Delete nahi ho paya!");
-    } finally {
-      setDeleteId(null);
-    }
+  // ================= DELETE REVIEW =================
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+
+    await supabase
+      .from("reviews")
+      .delete()
+      .eq("id", deleteId)
+      .eq("user_id", currentUser.id);
+
+    toast.success("Review deleted.");
+    setDeleteId(null);
+    loadReviews();
   };
 
   return (
-    <div className="mt-10 p-6 border-t border-slate-800 bg-black/40 rounded-[2rem] shadow-2xl">
-      <h3 className="text-2xl font-black mb-8 text-white uppercase italic tracking-tighter flex items-center gap-3">
-        <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
+    <div className="mt-12 p-8 border-t dark:border-slate-800 border-slate-300 
+    bg-white dark:bg-slate-900 rounded-3xl shadow-xl">
+
+      <h3 className="text-2xl font-black mb-10 text-slate-900 dark:text-white uppercase italic">
         Customer Experience
       </h3>
 
-      {/* Input Section */}
-      <div className="mb-10 p-6 bg-slate-900/50 rounded-3xl border border-slate-800">
-        <div className="flex flex-col gap-5">
+      {/* ================= INPUT SECTION ================= */}
+      <div className="mb-12 p-6 bg-slate-100 dark:bg-slate-800 rounded-2xl border dark:border-slate-700 border-slate-300">
+
+        <div className="flex flex-col gap-6">
+
           <div className="flex gap-4 items-center">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rate Product:</span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+              Rate Product:
+            </span>
+
             <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button 
-                  key={star} 
-                  type="button" 
-                  onClick={() => setRating(star)} 
-                  className={`text-2xl transition-all ${star <= rating ? "text-yellow-400" : "text-slate-700 hover:text-slate-500"}`}
+              {[1,2,3,4,5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  disabled={!currentUser}
+                  onClick={() => setRating(star)}
+                  className={`text-2xl transition ${
+                    star <= rating ? "text-yellow-400 scale-110" : "text-slate-400"
+                  }`}
                 >
                   ★
                 </button>
               ))}
             </div>
           </div>
+
           <textarea
-            className="w-full p-5 rounded-2xl bg-slate-950 border border-slate-800 outline-none text-white text-sm focus:border-blue-500 transition-all"
-            placeholder="Share your experience..."
-            rows={3} value={comment} onChange={(e) => setComment(e.target.value)}
+            disabled={!currentUser}
+            className={`w-full p-4 rounded-xl border text-sm outline-none transition
+              ${
+                currentUser
+                  ? "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  : "bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-500 cursor-not-allowed"
+              }`}
+            placeholder={
+              currentUser
+                ? "Share your experience..."
+                : "🔒 Login first to write a review"
+            }
+            rows={3}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
           />
-          <button type="button" onClick={handlePost} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase self-end">
+
+          <button
+            onClick={handlePost}
+            disabled={isSubmitting || !currentUser}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold text-sm self-end disabled:opacity-50 transition"
+          >
             {isSubmitting ? "Posting..." : "Submit Review"}
           </button>
+
         </div>
       </div>
 
-      {/* Reviews List */}
+      {/* ================= REVIEWS LIST ================= */}
       <div className="space-y-6">
-        {reviews.map((r) => (
-          <div key={r.id} className="relative p-6 bg-slate-900/30 border border-slate-800/50 rounded-[1.5rem] group overflow-hidden">
-            
-            {/* Rectangle Confirmation Overlay (Full Width) */}
-            {deleteId === r.id && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm animate-in fade-in duration-200">
-                <div className="flex flex-col md:flex-row items-center gap-6 p-4 w-full justify-center">
-                  <span className="text-white text-sm font-black uppercase italic tracking-widest">Are you sure you want to delete this review?</span>
-                  <div className="flex gap-4">
-                    <button 
-                      onClick={() => setDeleteId(null)} 
-                      className="px-8 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-black rounded-full uppercase transition-all"
-                    >
-                      No
-                    </button>
-                    <button 
-                      onClick={() => confirmDelete(r.id)} 
-                      className="px-8 py-2 bg-red-600 hover:bg-red-700 text-white text-[10px] font-black rounded-full uppercase shadow-lg shadow-red-600/20 transition-all"
-                    >
-                      Yes
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+
+        {reviews.slice(0, visibleCount).map((r) => (
+          <div
+            key={r.id}
+            className="relative p-6 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-2xl"
+          >
 
             <div className="flex justify-between items-start">
-              <div className="flex flex-col gap-1">
-                <p className="font-black text-xs text-blue-500 uppercase">@{r.username}</p>
-                <div className="flex text-yellow-500 text-[10px]">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</div>
+
+              <div>
+                <p className="font-bold text-blue-600 dark:text-blue-400 text-sm">
+                  @{r.username}
+                </p>
+
+                <div className="flex text-yellow-500 text-xs">
+                  {"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}
+                </div>
               </div>
-              {currentUser?.id === r.user_id && (
-                <button 
-                  onClick={() => setDeleteId(r.id)} 
-                  className="text-red-500/50 hover:text-red-500 text-[10px] font-black uppercase opacity-0 group-hover:opacity-100 transition-all border border-red-500/20 px-3 py-1 rounded-md"
-                >
-                  Delete
-                </button>
-              )}
+
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-xs text-slate-600 dark:text-slate-400">
+                  {formatDateTime(r.created_at)}
+                </span>
+
+                {currentUser?.id === r.user_id && (
+                  <button
+                    onClick={() => setDeleteId(r.id)}
+                    className="text-red-600 hover:text-red-700 font-semibold text-xs"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+
             </div>
-            <p className="text-slate-300 text-sm mt-3 leading-relaxed font-medium">{r.comment}</p>
+
+            <p className="text-slate-700 dark:text-slate-200 text-sm mt-4">
+              {r.comment}
+            </p>
+
           </div>
         ))}
+
+        {/* LOAD MORE / SHOW LESS */}
+        {reviews.length > 3 && (
+          <div className="flex justify-center mt-4">
+            {visibleCount < reviews.length ? (
+              <button
+                onClick={() => setVisibleCount(visibleCount + 3)}
+                className="px-6 py-2 bg-slate-300 dark:bg-slate-700 rounded-full text-sm font-semibold hover:bg-slate-400 dark:hover:bg-slate-600 transition"
+              >
+                Load More
+              </button>
+            ) : (
+              <button
+                onClick={() => setVisibleCount(3)}
+                className="px-6 py-2 bg-slate-300 dark:bg-slate-700 rounded-full text-sm font-semibold hover:bg-slate-400 dark:hover:bg-slate-600 transition"
+              >
+                Show Less
+              </button>
+            )}
+          </div>
+        )}
+
       </div>
+
+      {/* ================= DELETE CONFIRM MODAL ================= */}
+      {deleteId && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl w-[320px] text-center">
+            <p className="font-semibold text-slate-900 dark:text-white mb-6">
+              Are you sure you want to delete this review?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="px-5 py-2 rounded-lg bg-slate-300 dark:bg-slate-700 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-5 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

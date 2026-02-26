@@ -420,18 +420,30 @@ const handleLogin = (userData: { name: string; email: string }, token: string) =
  // --- UPGRADED LOGOUT WITH MODAL ---
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  const handleLogout = () => {
-    if (!isLogoutModalOpen) {
-      setIsLogoutModalOpen(true);
-      return;
-    }
-    // Asli Logout yahan hoga
-    setUser(null);
-    localStorage.removeItem("xob_user");
-    toast.success("Logged out successfully");
-    setIsLogoutModalOpen(false);
-  };
+ const handleLogout = async () => {
+  if (!isLogoutModalOpen) {
+    setIsLogoutModalOpen(true);
+    return;
+  }
 
+  // 🔥 REAL LOGOUT
+  await supabase.auth.signOut();
+  localStorage.removeItem("xob_user");
+  setUser(null);
+
+
+  // Clear local UI state
+  setUser(null);
+  localStorage.removeItem("xob_user");
+  localStorage.removeItem("token");
+
+  toast.success("Logged out successfully");
+
+  setIsLogoutModalOpen(false);
+
+  // 🔥 Important: force refresh
+
+};
   // Ye chhota sa component bhi isi ke neeche rakh de taaki confirm box dikhe
   const LogoutConfirmationUI = () => (
     <AnimatePresence>
