@@ -49,69 +49,52 @@ const CartSidebar = ({ isCartOpen, setIsCartOpen, cart, updateQuantity, removeIt
     if (!isCartOpen) setTimeout(() => setStep('cart'), 300);
   }, [isCartOpen]);
 
-// --- UPGRADED VALIDATION LOGIC (With Toast ID to prevent multiple popups) ---
-const validateAddressData = () => {
-  const { pincode, city, fullName, address, landmark } = formData;
+  // --- UPGRADED VALIDATION LOGIC ---
+  const validateAddressData = () => {
+    const { pincode, city, fullName, address, landmark } = formData;
 
-  if (!pincode) { 
-    toast.error("Please enter your PIN code", { id: 'address-error' }); 
-    return false; 
-  }
-  if (pincode.length !== 6) { 
-    toast.error("Please enter a valid 6-digit PIN code.❌", { id: 'address-error' }); 
-    return false; 
-  }
-  
-  if (!city) { 
-    toast.error("Please enter your city", { id: 'address-error' }); 
-    return false; 
-  }
-  if (city.length > 19) return false; 
+    if (!pincode) { toast.error("Please enter your PIN code"); return false; }
+    if (pincode.length !== 6) { toast.error("Please enter a valid 6-digit PIN code.❌"); return false; }
+    
+    if (!city) { toast.error("Please enter your city"); return false; }
+    // City logic: Max 19 characters, no specific error message for length
+    if (city.length > 19) return false; 
 
-  if (!fullName) { 
-    toast.error("Please enter your full name.", { id: 'address-error' }); 
-    return false; 
-  }
-  if (!address) { 
-    toast.error("Please enter your address.", { id: 'address-error' }); 
-    return false; 
-  }
-  if (!landmark) { 
-    toast.error("Please provide a nearby landmark for easier delivery.", { id: 'address-error' }); 
-    return false; 
-  }
+    if (!fullName) { toast.error("Please enter your full name."); return false; }
+    if (!address) { toast.error("Please enter your address."); return false; }
+    if (!landmark) { toast.error("Please provide a nearby landmark for easier delivery."); return false; }
 
-  return true;
-};
+    return true;
+  };
 
-const handleContinueToAddress = () => {
-  const { phone, email } = formData;
-  const phoneRegex = /^[0-9]{10}$/;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const handleContinueToAddress = () => {
+    const { phone, email } = formData;
+    const phoneRegex = /^[0-9]{10}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (!phone && !email) {
-    toast.error("Contact info is required to continue", { id: 'contact-error' });
-    return;
-  }
-  if (!phone) {
-    toast.error("Phone number is required", { id: 'contact-error' });
-    return;
-  }
-  if (!phoneRegex.test(phone)) {
-    toast.error("Please enter a valid 10-digit phone number❌", { id: 'contact-error' });
-    return;
-  }
-  if (!email) {
-    toast.error("Please enter your email address.", { id: 'contact-error' });
-    return;
-  }
-  if (!emailRegex.test(email)) {
-    toast.error("Invalid email format.", { id: 'contact-error' });
-    return;
-  }
+    if (!phone && !email) {
+      toast.error("Contact info is required to continue");
+      return;
+    }
+    if (!phone) {
+      toast.error("Phone number is required");
+      return;
+    }
+    if (!phoneRegex.test(phone)) {
+      toast.error("Please enter a valid 10-digit phone number❌");
+      return;
+    }
+    if (!email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+    if (!emailRegex.test(email)) {
+      toast.error("Invalid email format.");
+      return;
+    }
 
-  setStep('address');
-};
+    setStep('address');
+  };
 
   const handleProceedToCheckout = () => {
     const savedUser = localStorage.getItem("xob_user");
@@ -422,12 +405,18 @@ function App() {
   const shopRef = useRef<HTMLDivElement>(null);
   const aboutRef = useRef<HTMLDivElement>(null);
 
-  const handleLogin = (userData: { name: string; email: string }) => {
+// Yahan 'token' ko add kiya gaya hai string type ke saath
+const handleLogin = (userData: { name: string; email: string }, token: string) => { 
     setUser(userData);
+    
+    // User details save ho rahi hain
     localStorage.setItem("xob_user", JSON.stringify(userData));
+    
+    // AB TOKEN SAHI SE SAVE HOGA!
+    localStorage.setItem("token", token); 
+    
     toast.success(`Welcome back, ${userData.name}!`);
-  };
-
+};
  // --- UPGRADED LOGOUT WITH MODAL ---
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
@@ -620,6 +609,7 @@ function App() {
 
         <CartSidebar isCartOpen={isCartOpen} setIsCartOpen={setIsCartOpen} cart={cart} updateQuantity={updateQuantity} removeItem={removeItem} clearCart={clearCart} cartTotal={cartTotal} user={user} />
         {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />}
+          <LogoutConfirmationUI />
       </Layout>
     </Router>
   );
