@@ -48,16 +48,29 @@ export function Hero({ onCategoryClick }: HeroProps) {
     "Denim Jackets","Belts","Coats","Kurta","jubba"
   ];
 
+  /* AUTO IMAGE SLIDER WITH PAUSE LOGIC */
   useEffect(() => {
     if (isPaused) return;
+
     const interval = setInterval(() => {
-      setCurrentImage(prev => (prev === heroImages.length - 1 ? 0 : prev + 1));
+      setCurrentImage(prev =>
+        prev === heroImages.length - 1 ? 0 : prev + 1
+      );
     }, 4000);
     return () => clearInterval(interval);
   }, [isPaused]);
 
-  const nextImage = () => setCurrentImage(prev => (prev === heroImages.length - 1 ? 0 : prev + 1));
-  const prevImage = () => setCurrentImage(prev => (prev === 0 ? heroImages.length - 1 : prev - 1));
+  const nextImage = () => {
+    setCurrentImage(prev =>
+      prev === heroImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const prevImage = () => {
+    setCurrentImage(prev =>
+      prev === 0 ? heroImages.length - 1 : prev - 1
+    );
+  };
 
   const handleScroll = (cat: string) => {
     setActiveCategory(cat);
@@ -74,28 +87,43 @@ export function Hero({ onCategoryClick }: HeroProps) {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             const id = entry.target.id;
-            const match = categories.find(c => c.toLowerCase().replace(" ", "") === id);
+            const match = categories.find(
+              c => c.toLowerCase().replace(" ", "") === id
+            );
             if (match) setActiveCategory(match);
           }
         });
       },
       { threshold: 0.6 }
     );
+
     categories.forEach(cat => {
-      const el = document.getElementById(cat.toLowerCase().replace(" ", ""));
+      const id = cat.toLowerCase().replace(" ", "");
+      const el = document.getElementById(id);
       if (el) observerRef.current?.observe(el);
     });
+
     return () => observerRef.current?.disconnect();
   }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const menu = document.getElementById("sideMenu");
-      if (menuOpen && menu && !menu.contains(e.target as Node)) setMenuOpen(false);
+      if (menuOpen && menu && !menu.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
+
+  const scrollLeft = () => {
+    scrollRef.current?.scrollBy({ left: -150, behavior: "smooth" });
+  };
+
+  const scrollRight = () => {
+    scrollRef.current?.scrollBy({ left: 150, behavior: "smooth" });
+  };
 
   return (
     <section
@@ -104,9 +132,14 @@ export function Hero({ onCategoryClick }: HeroProps) {
       onTouchStart={() => setIsPaused(true)}
       onTouchEnd={() => setIsPaused(false)}
       onMouseEnter={() => setShowArrows(true)}
-      onMouseLeave={() => { setShowArrows(false); setIsPaused(false); }}
-      className="relative rounded-[2rem] overflow-hidden mb-16 min-h-[85vh] md:min-h-screen shadow-[0_40px_120px_-20px_rgba(0,0,0,0.6)] cursor-pointer select-none"
+      onMouseLeave={() => {
+        setShowArrows(false);
+        setIsPaused(false);
+      }}
+      
+      className="relative rounded-[2rem] overflow-hidden mb-16 min-h-[75vh] md:min-h-screen shadow-[0_40px_120px_-20px_rgba(0,0,0,0.6)] cursor-pointer select-none"
     >
+
       {/* IMAGE SLIDER */}
       <div className="absolute inset-0 pointer-events-none">
         {heroImages.map((img, i) => (
@@ -118,93 +151,118 @@ export function Hero({ onCategoryClick }: HeroProps) {
             }`}
           />
         ))}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-indigo-900/70" />
       </div>
 
-      {/* NEW ADJUSTED CONTENT AREA (Button + Text) */}
-      <div className="relative z-20 flex flex-col justify-center h-full min-h-[85vh] md:min-h-screen px-8 md:px-20">
+      {/* ARROWS */}
+      <button
+        onClick={(e) => { e.stopPropagation(); prevImage(); }}
+        className={`absolute left-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full text-white 
+        bg-white/10 backdrop-blur-xl border border-white/20
+        transition-all duration-500 ${
+          showArrows ? "opacity-100" : "opacity-0 pointer-events-none"
+        } hover:scale-110`}
+      >
+        ‹
+      </button>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); nextImage(); }}
+        className={`absolute right-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full text-white 
+        bg-white/10 backdrop-blur-xl border border-white/20
+        transition-all duration-500 ${
+          showArrows ? "opacity-100" : "opacity-0 pointer-events-none"
+        } hover:scale-110`}
+      >
+        ›
+      </button>
+
+      {/* MAIN CONTAINER FOR TEXT & MENU */}
+      <div className="relative z-20 p-8 md:p-20 flex flex-col h-full min-h-[75vh] md:min-h-screen">
         
-        {/* 🔥 MENU BUTTON (Positioned exactly where your red arrow was) */}
+        {/* 🔥 UPDATED MENU BUTTON (Ab ye Headline ke upar rahega) */}
         <button
-          onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }}
-          className="group w-14 h-14 flex items-center justify-center mb-8
-          bg-white/10 backdrop-blur-3xl border border-white/20 
-          text-white rounded-full shadow-2xl hover:bg-white/20 transition-all duration-500 hover:scale-110"
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          className="w-12 h-12 flex items-center justify-center mb-10
+          bg-white/10 backdrop-blur-2xl border border-white/20 
+          text-white rounded-full shadow-xl 
+          hover:scale-110 transition-all duration-300"
         >
-          <div className="flex flex-col gap-1.5 items-start">
-            <span className="w-6 h-0.5 bg-white group-hover:w-4 transition-all" />
-            <span className="w-4 h-0.5 bg-white group-hover:w-6 transition-all" />
-            <span className="w-5 h-0.5 bg-white transition-all" />
-          </div>
+          ☰
         </button>
 
         {/* HERO TEXT */}
-        <div className="max-w-2xl pointer-events-none">
-          <h1 className="text-5xl md:text-8xl font-black text-white leading-tight tracking-tighter">
+        <div className="max-w-2xl transition-all duration-700 pointer-events-none">
+          <h1 className="text-4xl md:text-7xl font-black text-white leading-tight">
             {heroContent[currentImage].title1} <br />
             <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
               {heroContent[currentImage].title2}
             </span>
           </h1>
-          <p className="mt-8 text-gray-300 text-base md:text-xl max-w-md leading-relaxed opacity-80">
+          <p className="mt-6 text-gray-300 text-sm md:text-lg max-w-md leading-relaxed">
             {heroContent[currentImage].desc}
           </p>
-          {isPaused && (
-            <div className="mt-6 flex items-center gap-3">
-              <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
-              <span className="text-[10px] uppercase tracking-[0.3em] text-white/50 font-bold">Paused View</span>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ARROWS (Desktop only) */}
-      <button onClick={(e) => { e.stopPropagation(); prevImage(); }} className={`absolute left-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full text-white bg-white/10 backdrop-blur-xl border border-white/20 transition-all duration-500 hidden md:block ${showArrows ? "opacity-100" : "opacity-0"}`}>‹</button>
-      <button onClick={(e) => { e.stopPropagation(); nextImage(); }} className={`absolute right-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full text-white bg-white/10 backdrop-blur-xl border border-white/20 transition-all duration-500 hidden md:block ${showArrows ? "opacity-100" : "opacity-0"}`}>›</button>
-
-      {/* 🔥 ZARA STYLE SIDE MENU ANIMATION */}
+      {/* SIDE MENU */}
       <div
         id="sideMenu"
-        className={`fixed top-0 left-0 h-screen w-full md:w-[400px] bg-white text-black z-[100] transform transition-transform duration-[700ms] cubic-bezier(0.77, 0, 0.175, 1) ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
+        onMouseDown={(e) => e.stopPropagation()}
+        className={`fixed top-0 left-0 h-full w-64 
+        bg-gradient-to-b from-black via-slate-900 to-black
+        backdrop-blur-2xl border-r border-white/10 
+        z-50 transform transition-transform duration-500 ease-out 
+        ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="p-10 h-full flex flex-col">
-          <button onClick={() => setMenuOpen(false)} className="self-end text-3xl font-light hover:rotate-90 transition-transform duration-300">✕</button>
-          
-          <div className="mt-20 space-y-6">
-            <p className="text-xs tracking-widest text-gray-400 uppercase mb-8">Categories</p>
-            {categories.map((cat, index) => (
-              <button
-                key={cat}
-                onClick={() => handleScroll(cat)}
-                style={{ transitionDelay: `${index * 50}ms` }}
-                className={`block w-full text-left text-3xl md:text-4xl font-bold tracking-tighter uppercase transition-all duration-500 ${menuOpen ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"} ${activeCategory === cat ? "text-blue-600" : "text-black hover:pl-4"}`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-auto border-t border-black/10 pt-10">
-            <p className="text-sm font-medium">X ONE BOUTIQUE</p>
-            <p className="text-xs text-gray-500">Redefining Modern Fashion</p>
-          </div>
-        </div>
-      </div>
-
-      {/* CATEGORY BAR */}
-      <div onMouseDown={(e) => e.stopPropagation()} className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40 w-[95%] md:w-auto">
-        <div ref={scrollRef} className="flex gap-4 p-2 rounded-full bg-black/20 backdrop-blur-3xl border border-white/10 no-scrollbar overflow-x-auto">
+        <div className="p-6 space-y-4 mt-20">
           {categories.map(cat => (
             <button
               key={cat}
               onClick={() => handleScroll(cat)}
-              className={`px-6 py-2.5 text-xs md:text-sm font-bold whitespace-nowrap rounded-full transition-all ${activeCategory === cat ? "bg-white text-black shadow-xl" : "text-white hover:bg-white/10"}`}
+              className={`block w-full text-left px-4 py-3 rounded-xl transition-all duration-300 
+              ${activeCategory === cat 
+                ? "bg-blue-600 text-white" 
+                : "text-gray-300 hover:bg-blue-600/20"}`}
             >
               {cat}
             </button>
           ))}
         </div>
       </div>
+
+      {/* GLASS CATEGORY BAR */}
+      <div 
+        onMouseDown={(e) => e.stopPropagation()}
+        className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40 w-[95%] md:w-auto flex items-center justify-center"
+      >
+        <button onClick={scrollLeft} className="md:hidden mr-2 text-white bg-white/10 backdrop-blur-xl p-2 rounded-full">
+          ‹
+        </button>
+        <div
+          ref={scrollRef}
+          className="flex gap-3 md:gap-5 overflow-x-auto scroll-smooth px-4 py-2 md:px-8 md:py-4 
+          rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 
+          shadow-2xl shadow-blue-500/20 no-scrollbar"
+        >
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => handleScroll(cat)}
+              className={`px-4 py-1.5 md:px-5 md:py-2 text-xs md:text-sm font-bold whitespace-nowrap rounded-full transition-all duration-300
+              ${activeCategory === cat 
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/40" 
+                : "text-white hover:bg-blue-500/40"}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        <button onClick={scrollRight} className="md:hidden ml-2 text-white bg-white/10 backdrop-blur-xl p-2 rounded-full">
+          ›
+        </button>
+      </div>
+
     </section>
   );
 }
