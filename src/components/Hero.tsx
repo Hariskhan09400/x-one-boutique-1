@@ -1,136 +1,270 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface HeroProps {
-  onCategoryClick: (category: string | null) => void; // Fix the type here
+  onCategoryClick: (category: string | null) => void;
 }
 
 export function Hero({ onCategoryClick }: HeroProps) {
-  const [apiMessage] = useState("");
+  const [currentImage, setCurrentImage] = useState(0);
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showArrows, setShowArrows] = useState(false);
+  const [isPaused, setIsPaused] = useState(false); // 🔥 New State to handle pause
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const categories = [
-    "All",
-    "Jeans",
-    "Shirt",
-    "T-Shirts",
-    "Denim Jackets",
-    "Belts",
-    "Coats",
-    "Kurta",
-    "jubba",
+  const heroImages = [
+    "https://images.unsplash.com/photo-1520975916090-3105956dac38",
+    "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59",
+    "https://images.unsplash.com/photo-1503341504253-dff4815485f1",
+    "https://images.unsplash.com/photo-1483985988355-763728e1935b"
   ];
 
-  const handleScroll = (cat: string) => {
-    onCategoryClick(cat === "All" ? "All" : cat);
-    let id = "";
-    switch (cat) {
-      case "All": id = "shop"; break;
-      case "Shirt": id = "shirt"; break;
-      case "Kurta": id = "Kurta"; break;
-      case "jubba": id = "jubba"; break;
-      case "Jeans": id = "jeans"; break;
-      case "T-Shirts": id = "tshirts"; break;
-      case "Denim Jackets": id = "denimjackets"; break;
-      case "Belts": id = "belts"; break;
-      case "Coats": id = "coats"; break;
-      default: return;
+  const heroContent = [
+    {
+      title1: "Elevate Your",
+      title2: "Style Game",
+      desc: "Premium craftsmanship. Precision stitching. High-grade breathable fabrics designed exclusively for modern men."
+    },
+    {
+      title1: "Engineered For",
+      title2: "Confidence",
+      desc: "Each X One Boutique piece is tailored to enhance your presence and move effortlessly with your lifestyle."
+    },
+    {
+      title1: "Luxury In",
+      title2: "Every Thread",
+      desc: "Superior fabric blends. Clean silhouettes. Long-lasting comfort that defines refined fashion."
+    },
+    {
+      title1: "Built For The",
+      title2: "Modern Man",
+      desc: "Minimal design. Maximum impact. A statement before you even speak."
     }
+  ];
+
+  const categories = [
+    "All","Jeans","Shirt","T-Shirts",
+    "Denim Jackets","Belts","Coats","Kurta","jubba"
+  ];
+
+  /* AUTO IMAGE SLIDER WITH PAUSE LOGIC */
+  useEffect(() => {
+    if (isPaused) return; // 🔥 Agar pause hai toh interval start nahi hoga
+
+    const interval = setInterval(() => {
+      setCurrentImage(prev =>
+        prev === heroImages.length - 1 ? 0 : prev + 1
+      );
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPaused]); // 🔥 Re-run when isPaused changes
+
+  const nextImage = () => {
+    setCurrentImage(prev =>
+      prev === heroImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const prevImage = () => {
+    setCurrentImage(prev =>
+      prev === 0 ? heroImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleScroll = (cat: string) => {
+    setActiveCategory(cat);
+    onCategoryClick(cat === "All" ? "All" : cat);
+    const id = cat.toLowerCase().replace(" ", "");
     const section = document.getElementById(id);
     section?.scrollIntoView({ behavior: "smooth" });
+    setMenuOpen(false);
+  };
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            const match = categories.find(
+              c => c.toLowerCase().replace(" ", "") === id
+            );
+            if (match) setActiveCategory(match);
+          }
+        });
+      },
+      { threshold: 0.6 }
+    );
+
+    categories.forEach(cat => {
+      const id = cat.toLowerCase().replace(" ", "");
+      const el = document.getElementById(id);
+      if (el) observerRef.current?.observe(el);
+    });
+
+    return () => observerRef.current?.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const menu = document.getElementById("sideMenu");
+      if (menuOpen && menu && !menu.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  const scrollLeft = () => {
+    scrollRef.current?.scrollBy({ left: -150, behavior: "smooth" });
+  };
+
+  const scrollRight = () => {
+    scrollRef.current?.scrollBy({ left: 150, behavior: "smooth" });
   };
 
   return (
     <section
-      className="relative rounded-[2rem] sm:rounded-[3.5rem] overflow-hidden 
-      border border-gray-200/50 dark:border-white/[0.08] 
-      shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] dark:shadow-[0_50px_120px_-30px_rgba(0,0,0,0.6)] 
-      mb-12 transition-all duration-700 group
-      bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl"
+      // 🔥 Mouse and Touch events to handle pause/resume
+      onMouseDown={() => setIsPaused(true)}
+      onMouseUp={() => setIsPaused(false)}
+      onTouchStart={() => setIsPaused(true)}
+      onTouchEnd={() => setIsPaused(false)}
+      onMouseEnter={() => setShowArrows(true)}
+      onMouseLeave={() => {
+        setShowArrows(false);
+        setIsPaused(false); // Security: resume if mouse leaves while holding
+      }}
+      
+      className="relative rounded-[2rem] overflow-hidden mb-16 min-h-[75vh] md:min-h-screen shadow-[0_40px_120px_-20px_rgba(0,0,0,0.6)] cursor-pointer select-none"
     >
-      {/* --- ADVANCED BACKGROUND ELEMENTS --- */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Dynamic Glows */}
-        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-blue-500/15 blur-[120px] animate-pulse"></div>
-        <div className="absolute -bottom-[20%] -right-[10%] w-[50%] h-[50%] bg-cyan-400/10 blur-[100px]"></div>
-        {/* Subtle Grid Pattern */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] brightness-100"></div>
-      </div>
 
-      <div className="relative grid md:grid-cols-2 gap-0">
-        
-        {/* --- LEFT CONTENT AREA --- */}
-        <div className="p-8 sm:p-12 md:p-16 lg:p-20 flex flex-col justify-center order-2 md:order-1 z-10">
-          
-          {/* Status Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl 
-          text-blue-600 dark:text-blue-300 
-          text-xs sm:text-sm font-black mb-6 self-start 
-          bg-blue-50/80 dark:bg-blue-500/10 
-          border border-blue-200/50 dark:border-blue-400/20 shadow-sm backdrop-blur-md uppercase tracking-wider">
-            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-            NEW COLLECTION 2026
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl 
-          font-black text-slate-900 dark:text-white 
-          mb-6 leading-[1.1] transition-all duration-500 tracking-tight">
-            Premium Men's
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-400 animate-gradient-x italic">
-              Fashion Collection
-            </span>
-          </h1>
-
-          <p className="text-slate-600 dark:text-slate-300 
-          text-base sm:text-lg md:text-xl
-          mb-10 max-w-lg leading-relaxed transition-all duration-500 font-medium opacity-90">
-            Welcome to X One Boutique — where your style gets the spotlight it truly deserves.
-            Discover premium fashion crafted to define your personality and elevate your presence.
-          </p>
-
-          {apiMessage && (
-            <p className="text-blue-600 dark:text-blue-400 text-sm mb-6 font-bold flex items-center gap-2">
-              <span className="w-4 h-[1px] bg-blue-500"></span> {apiMessage}
-            </p>
-          )}
-
-          {/* Luxury Filter Pills */}
-          <div className="flex flex-wrap gap-2.5 sm:gap-3">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => handleScroll(cat)}
-                className="px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold 
-                transition-all duration-300 active:scale-90 uppercase tracking-widest
-                bg-white/80 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200
-                border border-slate-200 dark:border-white/10
-                hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white
-                hover:shadow-[0_15px_30px_-10px_rgba(37,99,235,0.4)] hover:-translate-y-1 backdrop-blur-md"
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* --- RIGHT IMAGE AREA (Editorial Style) --- */}
-        <div className="relative min-h-[350px] sm:min-h-[450px] md:min-h-[600px] order-1 md:order-2 overflow-hidden group-hover:scale-[1.02] transition-transform duration-1000">
+      {/* IMAGE SLIDER */}
+      <div className="absolute inset-0 pointer-events-none">
+        {heroImages.map((img, i) => (
           <img
-            src="/images/xonemainpage.png"
-            alt="Fashion collection"
-            className="absolute inset-0 w-full h-full object-cover object-[50%_15%] transition-transform duration-[2000ms] group-hover:scale-110"
-            loading="eager"
+            key={i}
+            src={`${img}?auto=format&fit=crop&w=1400&q=80`}
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ${
+              i === currentImage ? "opacity-100 scale-105" : "opacity-0"
+            }`}
           />
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-indigo-900/70" />
+      </div>
 
-          {/* Sophisticated Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white dark:from-slate-950 via-transparent to-transparent hidden md:block w-1/4" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60" />
-          
-          {/* Floating Element for visual interest */}
-          <div className="absolute bottom-8 right-8 p-4 backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl hidden lg:block animate-bounce-slow">
-            <div className="text-white/80 text-[10px] font-black tracking-[0.3em] uppercase">X-One Quality</div>
-          </div>
+      {/* ARROWS */}
+      <button
+        onClick={(e) => { e.stopPropagation(); prevImage(); }}
+        className={`absolute left-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full text-white 
+        bg-white/10 backdrop-blur-xl border border-white/20
+        transition-all duration-500 ${
+          showArrows ? "opacity-100" : "opacity-0 pointer-events-none"
+        } hover:scale-110`}
+      >
+        ‹
+      </button>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); nextImage(); }}
+        className={`absolute right-6 top-1/2 -translate-y-1/2 z-30 p-4 rounded-full text-white 
+        bg-white/10 backdrop-blur-xl border border-white/20
+        transition-all duration-500 ${
+          showArrows ? "opacity-100" : "opacity-0 pointer-events-none"
+        } hover:scale-110`}
+      >
+        ›
+      </button>
+
+      {/* HERO TEXT */}
+      <div className="relative z-20 p-8 md:p-20 max-w-2xl transition-all duration-700 pointer-events-none">
+        <h1 className="text-4xl md:text-7xl font-black text-white leading-tight">
+          {heroContent[currentImage].title1} <br />
+          <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+            {heroContent[currentImage].title2}
+          </span>
+        </h1>
+        <p className="mt-6 text-gray-300 text-sm md:text-lg max-w-md leading-relaxed">
+          {heroContent[currentImage].desc}
+        </p>
+        {isPaused && (
+          <span className="inline-block mt-4 text-[10px] uppercase tracking-widest text-white/40 animate-pulse">
+            ⏸ Paused to read
+          </span>
+        )}
+      </div>
+
+      {/* MENU BUTTON */}
+      <button
+        onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+        className="absolute left-4 top-[32%] sm:top-1/2 sm:-translate-y-1/2 z-50 
+        bg-white/10 backdrop-blur-2xl border border-white/20 
+        text-white px-5 py-3 rounded-full shadow-xl 
+        hover:scale-110 transition-all duration-300"
+      >
+        ☰
+      </button>
+
+      {/* SIDE MENU */}
+      <div
+        id="sideMenu"
+        onMouseDown={(e) => e.stopPropagation()} // Prevent side menu from triggering pause
+        className={`fixed top-0 left-0 h-full w-64 
+        bg-gradient-to-b from-black via-slate-900 to-black
+        backdrop-blur-2xl border-r border-white/10 
+        z-50 transform transition-transform duration-500 ease-out 
+        ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="p-6 space-y-4 mt-20">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => handleScroll(cat)}
+              className={`block w-full text-left px-4 py-3 rounded-xl transition-all duration-300 
+              ${activeCategory === cat 
+                ? "bg-blue-600 text-white" 
+                : "text-gray-300 hover:bg-blue-600/20"}`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* GLASS CATEGORY BAR */}
+      <div 
+        onMouseDown={(e) => e.stopPropagation()} // Don't pause when clicking categories
+        className="absolute bottom-12 left-1/2 -translate-x-1/2 z-40 w-[95%] md:w-auto flex items-center justify-center"
+      >
+        <button onClick={scrollLeft} className="md:hidden mr-2 text-white bg-white/10 backdrop-blur-xl p-2 rounded-full">
+          ‹
+        </button>
+        <div
+          ref={scrollRef}
+          className="flex gap-3 md:gap-5 overflow-x-auto scroll-smooth px-4 py-2 md:px-8 md:py-4 
+          rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 
+          shadow-2xl shadow-blue-500/20 no-scrollbar"
+        >
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => handleScroll(cat)}
+              className={`px-4 py-1.5 md:px-5 md:py-2 text-xs md:text-sm font-bold whitespace-nowrap rounded-full transition-all duration-300
+              ${activeCategory === cat 
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/40" 
+                : "text-white hover:bg-blue-500/40"}`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        <button onClick={scrollRight} className="md:hidden ml-2 text-white bg-white/10 backdrop-blur-xl p-2 rounded-full">
+          ›
+        </button>
+      </div>
+
     </section>
   );
 }
