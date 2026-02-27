@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { EyeIcon, EyeSlashIcon, UserIcon, EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { useState, useEffect } from "react";
+import { EyeIcon, EyeSlashIcon, UserIcon, EnvelopeIcon, LockClosedIcon, CheckCircleIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast'; 
 import { handleLogin, handleSignup, handleForgotPassword } from "../utils/auth"; 
@@ -17,38 +17,44 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [name, setName] = useState(""); 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // --- NEW STATE FOR DESKTOP SHAKE ---
   const [isShaking, setIsShaking] = useState(false);
+  
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const navigate = useNavigate();
   const AUTH_TOAST_ID = "auth-action-toast";
 
-  // --- UPGRADED FEATURE: VISUAL SHAKE + MOBILE VIBRATE ---
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
   const triggerBawalSuccess = () => {
-    // 1. Mobile Vibration (Asli wala jhatka)
-    if ("vibrate" in navigator) {
-      navigator.vibrate([100, 50, 100]); 
+    if (rememberMe) {
+      localStorage.setItem("rememberedEmail", email);
+    } else {
+      localStorage.removeItem("rememberedEmail");
     }
 
-    // 2. Desktop Shake (Visual jhatka)
+    setShowSuccessPopup(true);
+    if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]); 
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 500);
 
-    // 3. Confetti Boom
     const scalar = 2;
-    const items = [
-      confetti.shapeFromText({ text: '🛍️', scalar }),
-      confetti.shapeFromText({ text: '✨', scalar })
-    ];
-
     confetti({
-      shapes: items,
+      shapes: [confetti.shapeFromText({ text: '💎', scalar }), confetti.shapeFromText({ text: '✨', scalar })],
       particleCount: 80,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#2563eb', '#06b6d4', '#ffffff']
+      colors: ['#2563eb', '#3b82f6', '#ffffff']
     });
+
+    setTimeout(() => setShowSuccessPopup(false), 3000);
   };
 
   const loginWithGoogle = async () => {
@@ -66,19 +72,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const onForgotPasswordClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Please enter your email address first!", { id: AUTH_TOAST_ID });
+      toast.error("Enter email first!", { id: AUTH_TOAST_ID });
       return;
     }
-    toast.loading("Sending reset link...", { id: AUTH_TOAST_ID });
+    toast.loading("Sending link...", { id: AUTH_TOAST_ID });
     try {
       const result = await handleForgotPassword(email);
       if (result.success) {
-        toast.success("Reset link sent! Check email. 📧", { id: AUTH_TOAST_ID });
+        toast.success("Link sent! 📧", { id: AUTH_TOAST_ID });
       } else {
-        toast.error(result.message || "Failed to send link", { id: AUTH_TOAST_ID });
+        toast.error(result.message || "Failed", { id: AUTH_TOAST_ID });
       }
     } catch (err) {
-      toast.error("Something went wrong!", { id: AUTH_TOAST_ID });
+      toast.error("Error occurred", { id: AUTH_TOAST_ID });
     }
   };
 
@@ -98,109 +104,113 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return; 
-    
-    if (!isLogin && password.length < 6) {
-      toast.error("Password must be at least 6 characters.", { id: AUTH_TOAST_ID });
-      return;
-    }
 
     setIsLoading(true);
-    toast.loading(isLogin ? "Authenticating..." : "Creating account...", { id: AUTH_TOAST_ID });
+    toast.loading(isLogin ? "Creating your style with X One Boutique..." : "Joining the elite...", { id: AUTH_TOAST_ID });
 
     try {
       if (isLogin) {
         const result = await handleLogin({ email, password });
         if (result.success) {
-          // --- TRIGGER SHAKE & VIBRATE ---
           triggerBawalSuccess(); 
-
-          toast.success(
-            <div className="flex flex-col">
-              <span className="font-bold text-lg">Login Successfully! ✅</span>
-              <span className="text-sm">Welcome to X One Boutique</span>
-            </div>, 
-            { id: AUTH_TOAST_ID, duration: 4000 }
-          );
-
           setTimeout(() => {
             onLogin({ name: result.user.username, email: result.user.email });
             navigate("/");
-          }, 1500);
-
+          }, 2000);
         } else {
-          // Error par chhota sa vibration jhatka (Mobile Only)
           if ("vibrate" in navigator) navigator.vibrate(50);
-          toast.error("Invalid email or password.", { id: AUTH_TOAST_ID });
+          toast.error("Invalid Credentials", { id: AUTH_TOAST_ID });
         }
       } else {
         const alreadyExists = await checkIfEmailExists(email);
         if (alreadyExists) {
-          toast.error("Email already registered.", { id: AUTH_TOAST_ID });
+          toast.error("Email taken", { id: AUTH_TOAST_ID });
           setIsLoading(false);
           return;
         }
-
         const result = await handleSignup({ username: name, email, password });
         if (result.success) {
           triggerBawalSuccess();
-          toast.success("Account created! Please login.", { id: AUTH_TOAST_ID });
+          toast.success("Welcome aboard!", { id: AUTH_TOAST_ID });
           setIsLogin(true);
           setName(""); 
         } else {
-          toast.error(result.message || "Signup failed", { id: AUTH_TOAST_ID });
+          toast.error(result.message || "Failed", { id: AUTH_TOAST_ID });
         }
       }
     } catch (err) {
-      toast.error("Connection error. Try again.", { id: AUTH_TOAST_ID });
+      toast.error("Connection Error", { id: AUTH_TOAST_ID });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-blue-900/20 flex items-center justify-center px-4 py-12 transition-colors duration-500">
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden transition-colors duration-500 bg-slate-50 dark:bg-[#0a0f1e]">
       
-      {/* --- DESKTOP SHAKE ANIMATION CSS --- */}
+      {/* --- ADAPTIVE BACKGROUND --- */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-600/20 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-indigo-500/10 dark:bg-indigo-600/20 rounded-full blur-[100px]" />
+      </div>
+
+      {/* --- SUCCESS POPUP --- */}
+      {showSuccessPopup && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-[380px] animate-slide-down">
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-blue-200 dark:border-blue-900/50 p-5 rounded-3xl shadow-2xl flex items-center gap-4">
+            <div className="bg-blue-600 rounded-2xl p-2.5 text-white shadow-lg shadow-blue-500/30">
+              <CheckCircleIcon className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="text-slate-900 dark:text-white font-black text-lg leading-tight">Login Successful</h4>
+              <p className="text-blue-600 dark:text-blue-400 font-bold text-sm">Welcome Back 👋</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DYNAMIC STYLES --- */}
       <style>{`
-        @keyframes bawal-vibrate {
-          0% { transform: translate(0); }
-          20% { transform: translate(-3px, 3px); }
-          40% { transform: translate(-3px, -3px); }
-          60% { transform: translate(3px, 3px); }
-          80% { transform: translate(3px, -3px); }
-          100% { transform: translate(0); }
+        @keyframes slide-down {
+          0% { transform: translate(-50%, -100px); opacity: 0; }
+          100% { transform: translate(-50%, 0); opacity: 1; }
         }
-        .animate-bawal-vibrate {
-          animation: bawal-vibrate 0.3s linear infinite;
+        .animate-slide-down { animation: slide-down 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+        .glass-container {
+          background: rgba(255, 255, 255, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+        .dark .glass-container {
+          background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(51, 65, 85, 0.5);
         }
       `}</style>
 
-      <div className={`max-w-md w-full space-y-8 transition-all duration-300 ${isShaking ? 'animate-bawal-vibrate scale-105' : ''}`}>
-        
-        <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl mb-6 transform hover:rotate-12 transition-transform cursor-pointer">
-            <UserIcon className="w-10 h-10 text-white" />
+      {/* --- LOGIN CARD --- */}
+      <div className={`relative z-10 w-full max-w-[420px] px-4 transition-transform duration-300 ${isShaking ? 'animate-bounce' : ''}`}>
+        <div className="glass-container backdrop-blur-3xl rounded-[2.5rem] p-8 md:p-10 shadow-2xl dark:shadow-blue-900/10">
+          
+          <div className="text-center mb-8">
+            <div className="inline-flex p-3 bg-blue-600 rounded-2xl shadow-xl shadow-blue-500/20 mb-4">
+              <SparklesIcon className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-1">
+              X One Boutique
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+              {isLogin ? "Your journey to style begins here" : "Sign up for exclusive access"}
+            </p>
           </div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">
-            X One Boutique
-          </h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            {isLogin ? "Step into style! Please login." : "Join the squad and start shopping."}
-          </p>
-        </div>
 
-        <div className="mt-8 bg-white dark:bg-slate-800/40 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-slate-200 dark:border-slate-700">
           <form className="space-y-5" onSubmit={handleSubmit}>
+            
             {!isLogin && (
               <div className="relative group">
                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                 <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  type="text" required value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="Full Name"
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+                  className="w-full pl-12 pr-4 py-4 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all dark:text-white placeholder:text-slate-400"
                 />
               </div>
             )}
@@ -208,67 +218,74 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <div className="relative group">
               <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email Address"
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+                className="w-full pl-12 pr-4 py-4 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all dark:text-white placeholder:text-slate-400"
               />
             </div>
 
             <div className="relative group">
               <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
-                className="w-full pl-12 pr-12 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+                className="w-full pl-12 pr-12 py-4 bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all dark:text-white placeholder:text-slate-400"
               />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500"
-              >
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500">
                 {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
               </button>
             </div>
 
-            {isLogin && (
-              <div className="flex justify-end">
-                <button type="button" onClick={onForgotPasswordClick} className="text-xs font-bold text-blue-600 hover:underline">
-                  Forgot Password?
-                </button>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50"
-            >
-              {isLogin ? "Login" : "Create Account"}
-            </button>
-
-            <p className="text-center text-sm text-slate-600 dark:text-slate-400">
-              {isLogin ? "New here? " : "Have an account? "}
-              <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-blue-600 font-bold hover:underline">
-                {isLogin ? "Sign up" : "Login"}
+            {/* REMEMBER ME UPGRADED */}
+            <div className="flex items-center justify-between px-1">
+              <button 
+                type="button" 
+                onClick={() => setRememberMe(!rememberMe)}
+                className="flex items-center gap-2.5 cursor-pointer group outline-none"
+              >
+                <div className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${rememberMe ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-300 ${rememberMe ? 'left-6' : 'left-1'}`} />
+                </div>
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Remember Me</span>
               </button>
-            </p>
+              {isLogin && (
+                <button type="button" onClick={onForgotPasswordClick} className="text-xs font-black text-blue-600 dark:text-blue-400 hover:underline">
+                  ForgotPassword?
+                </button>
+              )}
+            </div>
+
+            {/* ACTION BUTTONS */}
+            <div className="space-y-3 pt-2">
+              <button
+                type="submit" disabled={isLoading}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-500/20 transition-all active:scale-[0.97] disabled:opacity-70 flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (isLogin ? "Login" : "Get Started")}
+              </button>
+
+              <button
+                type="button" onClick={() => setIsLogin(!isLogin)}
+                className="w-full py-4 bg-transparent border-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-[0.97]"
+              >
+                {isLogin ? "Create New Account" : "Back to Login"}
+              </button>
+            </div>
 
             <div className="relative flex items-center py-2">
-              <div className="flex-1 border-t border-slate-200 dark:border-slate-700"></div>
-              <span className="px-3 text-xs text-slate-400 font-bold">OR</span>
-              <div className="flex-1 border-t border-slate-200 dark:border-slate-700"></div>
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
+              <span className="px-4 text-[10px] text-slate-400 dark:text-slate-500 font-black tracking-widest">OR CONNECT</span>
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-800"></div>
             </div>
 
             <button
-              type="button"
-              onClick={loginWithGoogle}
-              className="w-full flex items-center justify-center gap-3 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm active:scale-[0.98]"
+              type="button" onClick={loginWithGoogle}
+              className="w-full flex items-center justify-center gap-3 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm active:scale-[0.97]"
             >
               <svg className="w-5 h-5" viewBox="0 0 48 48">
                 <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
