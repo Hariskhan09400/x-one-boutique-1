@@ -610,15 +610,6 @@ const handleLogin = (userData: { name: string; email: string }, token: string) =
           <Route path="/checkout" element={<CheckoutPage cart={cart} onClearCart={clearCart} />} />
         </Routes>
 
-        <a href="https://wa.me/917208428589" className="fixed left-3 bottom-4 z-50 bg-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all">
-          <MessageCircle size={24} />
-        </a>
-        
-        <button onClick={() => setIsCartOpen(true)} className="fixed right-4 bottom-4 z-50 flex items-center gap-2 px-5 py-4 rounded-full bg-blue-600 text-white shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
-          <ShoppingCart size={24} />
-          {cartItemCount > 0 && <span className="bg-white text-blue-600 px-2 rounded-full text-xs font-black">{cartItemCount}</span>}
-        </button>
-
         <CartSidebar isCartOpen={isCartOpen} setIsCartOpen={setIsCartOpen} cart={cart} updateQuantity={updateQuantity} removeItem={removeItem} clearCart={clearCart} cartTotal={cartTotal} user={user} />
         {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAddToCart={addToCart} />}
           <LogoutConfirmationUI />

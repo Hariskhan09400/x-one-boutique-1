@@ -48,68 +48,98 @@ export function ProductCard({ product, onAddToCart, onOpenModal }: ProductCardPr
       </div>
 
       <div
-        className="rounded-2xl overflow-hidden shadow-lg relative
-        transition-all duration-500 hover:shadow-2xl hover:-translate-y-1
-        bg-white text-black
-        dark:bg-gradient-to-b dark:from-blue-950 dark:to-black dark:text-white"
+        className="group rounded-3xl overflow-hidden relative
+        transition-all duration-700 ease-out
+        bg-gradient-to-b from-slate-900/95 to-black/98
+        border border-white/[0.06]
+        shadow-[0_20px_60px_rgba(0,0,0,0.4)]
+        hover:shadow-[0_30px_90px_rgba(212,175,55,0.12)]
+        hover:border-white/[0.12]
+        hover:-translate-y-3
+        hover:scale-[1.02]"
       >
-        {/* IMAGE SECTION (Video logic removed) */}
-        <div className="relative w-full overflow-hidden">
-          <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar">
+        {/* IMAGE SECTION */}
+        <div className="relative w-full overflow-hidden aspect-[3/4]">
+          <div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar h-full">
             {product.images?.map((img, index) => (
-              <Link key={index} to={`/product/${product.id}`} className="w-full flex-shrink-0">
+              <Link key={index} to={`/product/${product.id}`} className="w-full flex-shrink-0 h-full">
                 <img
                   src={img}
                   alt={product.name}
-                  className="w-full h-72 object-cover snap-start cursor-pointer"
+                  className="w-full h-full object-cover snap-start cursor-pointer
+                  transition-transform duration-700 ease-out
+                  group-hover:scale-110"
                 />
               </Link>
             ))}
           </div>
 
-          <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/70 backdrop-blur-md rounded-full text-xs font-semibold text-white">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent
+            opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+          <div className="absolute top-4 left-4 px-4 py-2
+            bg-black/40 backdrop-blur-xl rounded-full
+            text-[10px] font-black tracking-[0.15em] text-white/90 uppercase
+            border border-white/10">
             {product.category}
           </div>
 
           {discount && (
-            <div className="absolute top-3 right-3 px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-full shadow-md">
+            <div className="absolute top-4 right-4 px-4 py-2
+              bg-gradient-to-r from-amber-600 to-amber-500
+              text-white text-xs font-black rounded-full
+              shadow-[0_8px_32px_rgba(245,158,11,0.3)]
+              animate-pulse">
               {discount}% OFF
             </div>
           )}
         </div>
 
         {/* CONTENT */}
-        <div className="p-4">
-          <h3 className="font-bold text-lg mb-1">{product.name}</h3>
-          <p className="text-sm mb-3 text-gray-600 dark:text-gray-400 line-clamp-2">{product.description}</p>
+        <div className="p-6 space-y-4">
+          <h3 className="font-bold text-xl text-white tracking-tight
+            transition-colors duration-300 group-hover:text-amber-400">
+            {product.name}
+          </h3>
+          <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">
+            {product.description}
+          </p>
 
           {/* PRICE + BUTTON */}
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
+          <div className="flex items-end justify-between pt-2">
+            <div className="flex flex-col gap-1">
               {product.originalPrice && (
                 <span className="text-sm text-gray-500 line-through">₹{product.originalPrice}</span>
               )}
-              <span className="text-2xl font-black text-red-600 dark:text-red-400">₹{product.price}</span>
+              <span className="text-3xl font-black bg-gradient-to-r from-amber-400 to-amber-200
+                bg-clip-text text-transparent">
+                ₹{product.price}
+              </span>
             </div>
 
             <button
               onClick={handleAddWithFeedback}
               disabled={isAdding}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all duration-300 shadow-md active:scale-95 ${
-                isAdding 
-                ? "bg-green-500 text-white scale-105" 
-                : "bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:scale-105"
+              className={`relative flex items-center gap-2 px-6 py-3.5 rounded-2xl
+                font-bold text-sm tracking-wide uppercase
+                transition-all duration-500
+                overflow-hidden group/btn
+                ${isAdding
+                  ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white scale-105 shadow-[0_12px_40px_rgba(16,185,129,0.4)]"
+                  : "bg-gradient-to-r from-slate-100 to-white text-slate-900 hover:scale-105 shadow-[0_12px_40px_rgba(255,255,255,0.15)] hover:shadow-[0_16px_60px_rgba(255,255,255,0.25)]"
               }`}
             >
+              <span className="absolute inset-0 bg-gradient-to-r from-amber-500/0 via-amber-500/30 to-amber-500/0
+                translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000" />
               {isAdding ? (
                 <>
-                  <CheckCircle2 size={18} />
-                  Added!
+                  <CheckCircle2 size={18} className="relative z-10" />
+                  <span className="relative z-10">Added</span>
                 </>
               ) : (
                 <>
-                  <ShoppingCart size={18} />
-                  Add
+                  <ShoppingCart size={18} className="relative z-10" />
+                  <span className="relative z-10">Add</span>
                 </>
               )}
             </button>

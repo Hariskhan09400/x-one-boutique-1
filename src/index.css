@@ -2,10 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap');
+
 @layer base {
   :root {
-    --brand-1: 56 189 248; /* cyan-400 */
-    --brand-2: 59 130 246; /* blue-500 */
+    --brand-1: 56 189 248;
+    --brand-2: 59 130 246;
+    --luxury-gold: 212 175 55;
+    --luxury-navy: 10 15 30;
   }
 
   body {
@@ -13,6 +17,11 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
   }
 }
 
@@ -23,6 +32,10 @@
 
   .glass-panel-strong {
     @apply bg-white/[0.06] backdrop-blur-xl border border-white/[0.10] shadow-[0_22px_80px_rgba(0,0,0,0.55)];
+  }
+
+  .luxury-glass {
+    @apply bg-gradient-to-br from-white/[0.08] to-white/[0.03] backdrop-blur-2xl border border-white/[0.12] shadow-[0_25px_80px_rgba(0,0,0,0.6)];
   }
 
   .brand-ring {
@@ -44,6 +57,19 @@
 
   .btn-secondary {
     @apply btn-premium text-white bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.10];
+  }
+
+  .luxury-card {
+    @apply bg-gradient-to-b from-slate-900/90 to-black/95 backdrop-blur-xl border border-white/[0.08]
+      shadow-[0_20px_70px_rgba(0,0,0,0.5)] transition-all duration-500
+      hover:shadow-[0_30px_90px_rgba(212,175,55,0.15)] hover:border-white/[0.15]
+      hover:-translate-y-2;
+  }
+
+  .luxury-input {
+    @apply w-full px-6 py-4 bg-white/[0.03] border border-white/[0.08] rounded-2xl
+      text-white placeholder:text-white/30 outline-none transition-all duration-300
+      focus:bg-white/[0.05] focus:border-white/[0.20] focus:ring-2 focus:ring-blue-500/20;
   }
 }
 
@@ -154,6 +180,45 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  @keyframes luxuryGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.1),
+                  0 0 40px rgba(212, 175, 55, 0.05);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(212, 175, 55, 0.2),
+                  0 0 60px rgba(212, 175, 55, 0.1);
+    }
+  }
+
+  .animate-luxuryGlow {
+    animation: luxuryGlow 3s ease-in-out infinite;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slideInRight {
+    animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes imageZoom {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.1);
+    }
+  }
 }
 
 html {
@@ -162,4 +227,5 @@ html {
 
 body {
   overflow-x: hidden;
+  background: linear-gradient(to bottom, #0a0f1e, #050810);
 }
