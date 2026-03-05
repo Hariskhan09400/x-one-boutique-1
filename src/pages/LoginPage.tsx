@@ -146,13 +146,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-end relative overflow-hidden bg-gradient-to-br from-[#0a0f1e] via-[#050810] to-black">
-
-      {/* --- LUXURY BACKGROUND --- */}
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden transition-colors duration-500 bg-slate-50 dark:bg-[#0a0f1e]">
+      
+      {/* --- ADAPTIVE BACKGROUND --- */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-br from-amber-600/10 to-blue-600/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-gradient-to-tl from-blue-600/10 to-amber-600/10 rounded-full blur-[120px]" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PHBhdGggZD0iTTM2IDE0aDR2NGgtNHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-600/20 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-indigo-500/10 dark:bg-indigo-600/20 rounded-full blur-[100px]" />
       </div>
 
       {/* --- SUCCESS POPUP --- */}
@@ -177,45 +176,30 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           100% { transform: translate(-50%, 0); opacity: 1; }
         }
         .animate-slide-down { animation: slide-down 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
-        @keyframes slideInFromRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
+        .glass-container {
+          background: rgba(255, 255, 255, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.7);
         }
-        .luxury-login-panel {
-          animation: slideInFromRight 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        .dark .glass-container {
+          background: rgba(15, 23, 42, 0.6);
+          border: 1px solid rgba(51, 65, 85, 0.5);
         }
       `}</style>
 
-      {/* --- LUXURY LOGIN PANEL (HALF SCREEN) --- */}
-      <div className={`luxury-login-panel relative z-10 w-full md:w-1/2 h-screen
-        bg-gradient-to-br from-black/95 via-slate-900/95 to-black/95
-        backdrop-blur-2xl border-l border-white/[0.08]
-        shadow-[-40px_0_100px_rgba(0,0,0,0.8)]
-        overflow-y-auto px-8 md:px-16 py-12
-        transition-transform duration-300 ${isShaking ? 'animate-bounce' : ''}`}>
-
-        <div className="max-w-md mx-auto">
+      {/* --- LOGIN CARD --- */}
+      <div className={`relative z-10 w-full max-w-[420px] px-4 transition-transform duration-300 ${isShaking ? 'animate-bounce' : ''}`}>
+        <div className="glass-container backdrop-blur-3xl rounded-[2.5rem] p-8 md:p-10 shadow-2xl dark:shadow-blue-900/10">
           
-          <div className="text-center mb-12">
-            <div className="inline-flex p-4 bg-gradient-to-br from-amber-600/20 to-amber-500/10
-              rounded-3xl shadow-2xl shadow-amber-500/10 mb-6
-              border border-amber-500/20">
-              <SparklesIcon className="w-10 h-10 text-amber-400" />
+          <div className="text-center mb-8">
+            <div className="inline-flex p-3 bg-blue-600 rounded-2xl shadow-xl shadow-blue-500/20 mb-4">
+              <SparklesIcon className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-5xl font-black text-white tracking-tight leading-tight mb-3
-              bg-gradient-to-r from-white via-amber-200 to-white bg-clip-text text-transparent">
-              X ONE BOUTIQUE
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-1">
+              X One Boutique
             </h2>
-            <p className="text-gray-400 font-medium text-sm tracking-wide">
-              {isLogin ? "ELEVATE YOUR STYLE JOURNEY" : "JOIN THE LUXURY EXPERIENCE"}
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+              {isLogin ? "Your journey to style begins here" : "Sign up for exclusive access"}
             </p>
-            <div className="mt-4 h-[1px] w-20 mx-auto bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
           </div>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
