@@ -4,15 +4,13 @@ const supabaseUrl = 'https://oaonaiocrkujucaepefk.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hb25haW9jcmt1anVjYWVwZWZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NTEwNDcsImV4cCI6MjA4NzQyNzA0N30.FrvBV8S_ztH_bJr9O_or1DLRjZF6GR2or6UkmrTyXTE';
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// --- 1. SIGNUP LOGIC (Auth + Profile Table) ---
+// --- 1. SIGNUP LOGIC ---
 export const handleSignup = async ({ username, email, password }: any) => {
   try {
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { full_name: username },
-      },
+      options: { data: { full_name: username } },
     });
 
     if (authError) throw authError;
@@ -20,16 +18,15 @@ export const handleSignup = async ({ username, email, password }: any) => {
     if (data.user) {
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert([
-          { 
-            id: data.user.id, 
-            full_name: username, 
-            email: email 
-          }
-        ]);
-      
+        .insert([{
+          id:        data.user.id,
+          full_name: username,
+          email:     email.toLowerCase().trim(),
+          role:      'user',   // ← default role set karo
+        }]);
+
       if (profileError) {
-        console.error("Profile Link Error:", profileError.message);
+        console.error("Profile insert error:", profileError.message);
       }
     }
 
@@ -49,25 +46,24 @@ export const handleLogin = async ({ email, password }: any) => {
 
     if (error) throw error;
 
-    return { 
-      success: true, 
-      user: { 
-        username: data.user.user_metadata.full_name, 
-        email: data.user.email,
-        id: data.user.id 
-      } 
+    return {
+      success: true,
+      user: {
+        username: data.user.user_metadata.full_name,
+        email:    data.user.email,
+        id:       data.user.id,
+      },
     };
   } catch (error: any) {
     return { success: false, message: "The login information you entered is incorrect." };
   }
 };
 
-// --- 3. FORGOT PASSWORD (Reset Link bhejega) ---
+// --- 3. FORGOT PASSWORD ---
 export const handleForgotPassword = async (email: string) => {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      // Jahan user link click karne ke baad redirect hoga
-      redirectTo: `${window.location.origin}/update-password`, 
+      redirectTo: `${window.location.origin}/update-password`,
     });
     if (error) throw error;
     return { success: true };
@@ -76,12 +72,10 @@ export const handleForgotPassword = async (email: string) => {
   }
 };
 
-// --- 4. UPDATE PASSWORD (Naya password set karega) ---
+// --- 4. UPDATE PASSWORD ---
 export const handleUpdatePassword = async (newPassword: string) => {
   try {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) throw error;
     return { success: true };
   } catch (error: any) {

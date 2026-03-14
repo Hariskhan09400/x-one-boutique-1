@@ -67,11 +67,13 @@ import {
   SlidersHorizontal,
   BarChart3,
   Eye,
+  EyeOff,
   Share2,
   Copy,
   ExternalLink,
   Info,
   ShieldCheck,
+  Shield,
   Award,
   Crown,
   Flame,
@@ -332,11 +334,13 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast.success(`Welcome back, ${finalUser.name}! 🛍️`, { style: { fontWeight: "700" } });
   }, []);
 
+  // ✅ FIX: logout pe adminPinVerified reset karo
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem("xob_user");
     localStorage.removeItem("token");
+    adminPinVerified = false; // ← PIN reset on logout
     toast.success("Logged out successfully");
   }, []);
 
@@ -617,6 +621,139 @@ class ErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// SECTION 4.5 — ADMIN PIN GATE
+// ══════════════════════════════════════════════════════════════════════════════
+
+const ADMIN_PIN       = "1234"; // ← APNA PIN YAHAN BADLO
+const PIN_SESSION_KEY = "xob_admin_pin_ok";
+
+// ✅ KEY FIX: Module-level variable
+// - Page refresh hone pe = false (module re-loads)
+// - Navigate karo /admin pe = false (component unmount/remount)
+// - Logout pe = false (explicitly reset)
+// - Sirf PIN dene ke baad = true
+let adminPinVerified = false;
+
+const AdminPinGate = ({ onSuccess }: { onSuccess: () => void }) => {
+  const [pin,    setPin]    = useState(["", "", "", ""]);
+  const [error,  setError]  = useState(false);
+  const [shake,  setShake]  = useState(false);
+  const [tries,  setTries]  = useState(0);
+  const [locked, setLocked] = useState(false);
+  const [secs,   setSecs]   = useState(0);
+  const [show,   setShow]   = useState(false);
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => { refs.current[0]?.focus(); }, []);
+
+  useEffect(() => {
+    if (!locked) return;
+    setSecs(30);
+    const iv = setInterval(() => setSecs(t => {
+      if (t <= 1) { clearInterval(iv); setLocked(false); setTries(0); return 0; }
+      return t - 1;
+    }), 1000);
+    return () => clearInterval(iv);
+  }, [locked]);
+
+  const check = (digits: string[]) => {
+    if (digits.join("") === ADMIN_PIN) {
+      onSuccess(); // ← AdminRoute mein adminPinVerified = true set hoga
+      return;
+    }
+    const n = tries + 1; setTries(n); setError(true); setShake(true);
+    setPin(["", "", "", ""]);
+    setTimeout(() => { setShake(false); refs.current[0]?.focus(); }, 500);
+    if (n >= 3) setLocked(true);
+  };
+
+  const onInp = (i: number, v: string) => {
+    if (locked) return;
+    const d = v.replace(/\D/g, "").slice(-1);
+    const np = [...pin]; np[i] = d; setPin(np); setError(false);
+    if (d && i < 3) refs.current[i + 1]?.focus();
+    if (d && i === 3) setTimeout(() => check([...np.slice(0, 3), d]), 80);
+  };
+
+  const onKey = (i: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !pin[i] && i > 0) refs.current[i - 1]?.focus();
+  };
+
+  const numpad = (k: string) => {
+    if (locked) return;
+    const idx = pin.findIndex(p => p === ""); if (idx === -1) return;
+    const np = [...pin]; np[idx] = k; setPin(np); setError(false);
+    if (idx === 3) setTimeout(() => check(np), 80);
+  };
+
+  const del = () => {
+    const last = [...pin].map((p, i) => ({ p, i })).filter(x => x.p !== "").pop();
+    if (!last) return;
+    const np = [...pin]; np[last.i] = ""; setPin(np); setError(false);
+  };
+
+  const filled = pin.join("").length === 4;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#08090f", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.4, backgroundImage: "linear-gradient(rgba(37,99,235,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.06) 1px,transparent 1px)", backgroundSize: "44px 44px" }} />
+      <div style={{ position: "absolute", top: "35%", left: "50%", transform: "translate(-50%,-50%)", width: 460, height: 460, background: "radial-gradient(circle,rgba(37,99,235,.13) 0%,transparent 70%)", pointerEvents: "none" }} />
+      <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38, ease: "easeOut" }} style={{ position: "relative", width: "100%", maxWidth: 360, margin: "0 16px" }}>
+        <div style={{ background: "rgba(13,15,26,0.97)", border: "1px solid rgba(37,99,235,.22)", borderRadius: 24, padding: "36px 30px", boxShadow: "0 28px 72px rgba(0,0,0,.65)" }}>
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div style={{ width: 54, height: 54, background: "linear-gradient(135deg,#1d4ed8,#3b82f6)", borderRadius: 16, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 28px rgba(37,99,235,.42)", marginBottom: 14 }}>
+              <Shield size={24} color="#fff" />
+            </div>
+            <h1 style={{ color: "#f1f5f9", fontSize: 19, fontWeight: 800, margin: 0 }}>ADMIN ACCESS</h1>
+            <p style={{ color: "rgba(148,163,184,.65)", fontSize: 12, marginTop: 6, fontWeight: 500 }}>Enter your secret PIN to continue</p>
+          </div>
+
+          <motion.div animate={shake ? { x: [-8, 8, -6, 6, -3, 3, 0] } : {}} transition={{ duration: 0.38 }} style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 22 }}>
+            {pin.map((digit, i) => (
+              <input key={i} ref={el => { refs.current[i] = el; }} type={show ? "text" : "password"} inputMode="numeric" maxLength={1} value={digit}
+                onChange={e => onInp(i, e.target.value)} onKeyDown={e => onKey(i, e)} disabled={locked}
+                style={{ width: 58, height: 66, textAlign: "center", fontSize: 22, fontWeight: 900, background: digit ? "rgba(37,99,235,.16)" : "rgba(255,255,255,.04)", border: `2px solid ${error ? "rgba(239,68,68,.65)" : digit ? "rgba(37,99,235,.6)" : "rgba(255,255,255,.09)"}`, borderRadius: 14, color: "#f1f5f9", outline: "none", cursor: locked ? "not-allowed" : "text", transition: "all .18s", caretColor: "transparent" }}
+              />
+            ))}
+          </motion.div>
+
+          <div style={{ textAlign: "center", marginBottom: 14 }}>
+            <button onClick={() => setShow(!show)} style={{ background: "none", border: "none", color: "rgba(148,163,184,.55)", fontSize: 11, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+              {show ? <EyeOff size={12} /> : <Eye size={12} />} {show ? "Hide PIN" : "Show PIN"}
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {(error || locked) && (
+              <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                style={{ background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.28)", borderRadius: 10, padding: "9px 14px", marginBottom: 14, textAlign: "center", fontSize: 12, fontWeight: 600, color: "#f87171" }}>
+                {locked ? `Too many attempts. Try again in ${secs}s 🔒` : `Wrong PIN. ${3 - tries} attempt${3 - tries === 1 ? "" : "s"} left.`}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((k, i) => (
+              <button key={i} onClick={() => k === "⌫" ? del() : k ? numpad(k) : undefined} disabled={locked || k === ""}
+                style={{ height: 50, borderRadius: 12, border: `1px solid ${k === "" ? "transparent" : "rgba(255,255,255,.07)"}`, background: k === "⌫" ? "rgba(239,68,68,.1)" : k === "" ? "transparent" : "rgba(255,255,255,.05)", color: k === "⌫" ? "#f87171" : "#e2e8f0", fontSize: 17, fontWeight: 700, cursor: k === "" || locked ? "default" : "pointer", transition: "all .14s" }}
+                onMouseEnter={e => { if (k && k !== "" && !locked) { const el = e.currentTarget; el.style.background = k === "⌫" ? "rgba(239,68,68,.22)" : "rgba(37,99,235,.22)"; el.style.borderColor = "rgba(37,99,235,.42)"; } }}
+                onMouseLeave={e => { if (k && k !== "" && !locked) { const el = e.currentTarget; el.style.background = k === "⌫" ? "rgba(239,68,68,.1)" : "rgba(255,255,255,.05)"; el.style.borderColor = "rgba(255,255,255,.07)"; } }}
+              >{k}</button>
+            ))}
+          </div>
+
+          <button onClick={() => filled && !locked && check(pin)} disabled={!filled || locked}
+            style={{ width: "100%", padding: "13px", borderRadius: 14, border: "none", background: filled && !locked ? "linear-gradient(135deg,#1d4ed8,#3b82f6)" : "rgba(255,255,255,.05)", color: filled && !locked ? "#fff" : "rgba(255,255,255,.18)", fontWeight: 800, fontSize: 14, letterSpacing: "0.08em", cursor: filled && !locked ? "pointer" : "not-allowed", transition: "all .2s", boxShadow: filled && !locked ? "0 8px 22px rgba(37,99,235,.35)" : "none" }}>
+            UNLOCK →
+          </button>
+          <p style={{ textAlign: "center", color: "rgba(100,116,139,.4)", fontSize: 10, marginTop: 20, fontWeight: 500 }}>X ONE BOUTIQUE · ADMIN PORTAL · RESTRICTED ACCESS</p>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 // SECTION 5 — ROUTE GUARDS
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -629,13 +766,34 @@ const ProtectedRoute = ({ children }: { children?: ReactNode }) => {
   return children ? <>{children}</> : <Outlet />;
 };
 
+// ✅ FINAL FIXED AdminRoute
 const AdminRoute = ({ children }: { children?: ReactNode }) => {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
+
+  // Always false on every mount/navigate — never reads from storage
+  const [pinOk, setPinOk] = useState(false);
+
   if (isLoading) return <GlobalLoader message="Checking permissions..." />;
-  if (!isAuthenticated)
+
+  if (!isAuthenticated) {
+    adminPinVerified = false; // reset on logout
     return <Navigate to="/login" state={{ from: location }} replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  }
+
+  // Check module-level flag AND local state
+  // Both must be true to enter admin
+  if (!adminPinVerified || !pinOk) {
+    return (
+      <AdminPinGate
+        onSuccess={() => {
+          adminPinVerified = true; // module-level set
+          setPinOk(true);          // local state set
+        }}
+      />
+    );
+  }
+
   return children ? <>{children}</> : <Outlet />;
 };
 
