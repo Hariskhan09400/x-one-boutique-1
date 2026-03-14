@@ -79,8 +79,17 @@ import {
 import { supabase } from "./lib/supabase";
 import { products } from "./data/products";
 import type { Product, CartItem } from "./types";
-
+import AboutPage    from "./pages/AboutPage";
+import ContactPage  from "./pages/ContactPage";
+import FAQPage      from "./pages/FAQPage";
+import PrivacyPage  from "./pages/PrivacyPage";
+import RefundPage   from "./pages/RefundPage";
+import ShippingPage from "./pages/ShippingPage";
+import TermsPage    from "./pages/TermsPage";
+import ShopPage from "./pages/ShopPage";
+import WishlistPage from "./pages/WishlistPage";
 // ─── Lazy Pages ───────────────────────────────────────────────────────────────
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const HomePage       = lazy(() => import("./pages/HomePage"));
 const ProductPage    = lazy(() => import("./pages/ProductPage"));
 const CartPage       = lazy(() => import("./pages/CartPage"));
@@ -365,20 +374,41 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// ─── Cart Provider ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH: CartProvider + WishlistProvider
+// User ID ke saath keys — har user ka apna alag cart + wishlist
+// Logout pe clear NAHI hoga — next login pe wapas milega
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── CART PROVIDER — REPLACE YOUR EXISTING CartProvider WITH THIS ──────────────
 const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useContext(AuthContext) ?? { user: null };
+
+  // User-specific key — guest ke liye "xob_cart_guest"
+  const cartKey = user?.id ? `xob_cart_${user.id}` : "xob_cart_guest";
+
   const [cart, setCart] = useState<CartItem[]>(() => {
-    try { return JSON.parse(localStorage.getItem("xob_cart") || "[]"); }
+    try { return JSON.parse(localStorage.getItem(cartKey) || "[]"); }
     catch { return []; }
   });
+
   const [isCartOpen,    setIsCartOpen]    = useState(false);
   const [lastAdded,     setLastAdded]     = useState<CartItem | null>(null);
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [activePromo,   setActivePromo]   = useState<string | null>(null);
 
+  // Re-load cart when user changes (login / logout)
   useEffect(() => {
-    localStorage.setItem("xob_cart", JSON.stringify(cart));
-  }, [cart]);
+    try {
+      const saved = localStorage.getItem(cartKey);
+      setCart(saved ? JSON.parse(saved) : []);
+    } catch { setCart([]); }
+  }, [cartKey]);
+
+  // Save to localStorage on every cart change
+  useEffect(() => {
+    localStorage.setItem(cartKey, JSON.stringify(cart));
+  }, [cart, cartKey]);
 
   const addToCart = useCallback((product: Product, size?: string) => {
     setCart((prev) => {
@@ -428,17 +458,13 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
     return false;
   }, []);
 
-  const cartItemCount = useMemo(
-    () => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
-  const rawTotal = useMemo(
-    () => cart.reduce((s, i) => s + i.price * i.quantity, 0), [cart]);
-  const cartSavings = useMemo(
-    () => cart.reduce((s, i) => {
-      if (i.originalPrice) return s + (i.originalPrice - i.price) * i.quantity;
-      return s;
-    }, 0), [cart]);
-  const cartTotal = useMemo(
-    () => Math.round(rawTotal * (1 - promoDiscount / 100)), [rawTotal, promoDiscount]);
+  const cartItemCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
+  const rawTotal      = useMemo(() => cart.reduce((s, i) => s + i.price * i.quantity, 0), [cart]);
+  const cartSavings   = useMemo(() => cart.reduce((s, i) => {
+    if (i.originalPrice) return s + (i.originalPrice - i.price) * i.quantity;
+    return s;
+  }, 0), [cart]);
+  const cartTotal     = useMemo(() => Math.round(rawTotal * (1 - promoDiscount / 100)), [rawTotal, promoDiscount]);
 
   const value = useMemo(() => ({
     cart, cartItemCount, cartTotal, cartSavings,
@@ -454,16 +480,31 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
-// ─── Wishlist Provider ─────────────────────────────────────────────────────────
+
+// ── WISHLIST PROVIDER — REPLACE YOUR EXISTING WishlistProvider WITH THIS ──────
 const WishlistProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useContext(AuthContext) ?? { user: null };
+
+  // User-specific key
+  const wishlistKey = user?.id ? `xob_wishlist_${user.id}` : "xob_wishlist_guest";
+
   const [wishlist, setWishlist] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("xob_wishlist") || "[]"); }
+    try { return JSON.parse(localStorage.getItem(wishlistKey) || "[]"); }
     catch { return []; }
   });
 
+  // Re-load wishlist when user changes
   useEffect(() => {
-    localStorage.setItem("xob_wishlist", JSON.stringify(wishlist));
-  }, [wishlist]);
+    try {
+      const saved = localStorage.getItem(wishlistKey);
+      setWishlist(saved ? JSON.parse(saved) : []);
+    } catch { setWishlist([]); }
+  }, [wishlistKey]);
+
+  // Save on every change
+  useEffect(() => {
+    localStorage.setItem(wishlistKey, JSON.stringify(wishlist));
+  }, [wishlist, wishlistKey]);
 
   const toggleWishlist = useCallback((id: string) => {
     setWishlist((p) => {
@@ -474,19 +515,15 @@ const WishlistProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const isWishlisted = useCallback(
-    (id: string) => wishlist.includes(id), [wishlist]);
+  const isWishlisted = useCallback((id: string) => wishlist.includes(id), [wishlist]);
 
   const value = useMemo(() => ({
     wishlist, toggleWishlist, isWishlisted,
     wishlistCount: wishlist.length,
   }), [wishlist, toggleWishlist, isWishlisted]);
 
-  return (
-    <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
-  );
+  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 };
-
 // ─── Recently Viewed Provider ─────────────────────────────────────────────────
 const RecentlyViewedProvider = ({ children }: { children: ReactNode }) => {
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => {
@@ -1598,7 +1635,13 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-
+      <Route path="/shop" element={
+  <PageTransition><ShopPage /></PageTransition>
+} />
+// MainLayout ke andar add karo:
+<Route path="/wishlist" element={
+  <PageTransition><WishlistPage /></PageTransition>
+} />
         {/* ── Main Layout ── */}
         <Route element={<MainLayout />}>
           <Route path="/" element={
@@ -1636,7 +1679,6 @@ const AnimatedRoutes = () => {
             } />
           </Route>
         </Route>
-
         {/* ── Auth Layout ── */}
         <Route element={<AuthLayout />}>
           <Route element={<GuestRoute />}>
@@ -1673,13 +1715,28 @@ const AnimatedRoutes = () => {
             } />
           </Route>
         </Route>
-
+         
+         {/* ── Info / Policy Pages ── */}
+<Route element={<MainLayout />}>
+  <Route path="/about"    element={<PageTransition><AboutPage    /></PageTransition>} />
+  <Route path="/contact"  element={<PageTransition><ContactPage  /></PageTransition>} />
+  <Route path="/faq"      element={<PageTransition><FAQPage      /></PageTransition>} />
+  <Route path="/privacy"  element={<PageTransition><PrivacyPage  /></PageTransition>} />
+  <Route path="/refund"   element={<PageTransition><RefundPage   /></PageTransition>} />
+  <Route path="/shipping" element={<PageTransition><ShippingPage /></PageTransition>} />
+  <Route path="/terms"    element={<PageTransition><TermsPage    /></PageTransition>} />
+</Route>
         {/* ── 404 ── */}
         <Route path="*" element={
           <Suspense fallback={<PageLoader />}>
             <PageTransition><NotFoundPage /></PageTransition>
           </Suspense>
         } />
+        <Route path="/settings" element={
+  <Suspense fallback={<PageLoader />}>
+    <PageTransition><SettingsPage /></PageTransition>
+  </Suspense>
+} />
       </Routes>
     </AnimatePresence>
   );

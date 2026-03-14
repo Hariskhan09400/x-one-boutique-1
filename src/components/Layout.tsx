@@ -1,18 +1,23 @@
 import { ReactNode } from "react";
+import { useLocation } from "react-router-dom";
+import Footer from "./Footer";
 
 interface LayoutProps {
   children: ReactNode;
-  cartItemCount: number;      // Add this
-  onCartOpen: () => void;      // Add this
-  showToast: boolean;          // Add this
-  // Ab yahan cartItemCount aur onCartOpen ki zaroorat nahi kyunki Navbar yahan nahi hai
+  cartItemCount: number;
+  onCartOpen: () => void;
+  showToast: boolean;
 }
 
+// Pages jahan footer NAHI aayega
+const HIDE_FOOTER_ROUTES = ["/profile", "/orders"];
+
 const Layout = ({ children }: LayoutProps) => {
+  const { pathname } = useLocation();
+  const showFooter = !HIDE_FOOTER_ROUTES.includes(pathname);
+  
   return (
     <div className="min-h-screen bg-white dark:bg-[#020617] text-black dark:text-white transition-colors duration-300">
-      
-      {/* ❌ Navbar yahan se hata diya hai taaki DOUBLE na dikhe */}
 
       {/* ================= MAIN ================= */}
       <main>
@@ -20,9 +25,7 @@ const Layout = ({ children }: LayoutProps) => {
       </main>
 
       {/* ================= FOOTER ================= */}
-      <footer className="mt-20 border-t border-slate-200 dark:border-slate-800 py-8 text-center text-sm text-slate-500">
-        © {new Date().getFullYear()} X One Boutique. All rights reserved.
-      </footer>
+      {showFooter && <Footer />}
 
     </div>
   );
