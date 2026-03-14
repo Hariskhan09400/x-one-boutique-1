@@ -1,3 +1,15 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║  Hero.tsx  —  X One Boutique                                     ║
+ * ║  Design Direction: Full-Bleed Editorial Fashion                  ║
+ * ║  Aesthetic: Balenciaga × CR Fashion Book × Celine               ║
+ * ║                                                                  ║
+ * ║  FIX: Magnetic buttons + parallax RAF disabled on touch/mobile   ║
+ * ║  Desktop (pointer:fine)  → full magnetic + parallax effect       ║
+ * ║  Mobile  (pointer:coarse) → zero RAF, plain tap buttons          ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ */
+
 import React, {
   useState,
   useEffect,
@@ -35,8 +47,7 @@ interface CategoryItem {
   value: string | null;
 }
 
-const INTERVAL_MS   = 6000;
-const PARALLAX_LERP = 0.062;
+const INTERVAL_MS     = 6000;
 
 const SLIDES: SlideData[] = [
   {
@@ -63,7 +74,7 @@ const SLIDES: SlideData[] = [
     headline: ["PREMIUM", "SHIRTS"],
     sub: "High-grade breathable fabrics with precision stitching. For the modern man.",
     cta: "Shop Shirts",
-    ctaCategory: "Shirt",
+    ctaCategory: "Shirts",
     secondary: "Shop T-Shirts",
     secondaryCategory: "T-Shirts",
     image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=1600&q=90&fit=crop",
@@ -107,7 +118,7 @@ const SLIDES: SlideData[] = [
 
 const CATEGORIES: CategoryItem[] = [
   { label: "All",          value: null },
-  { label: "Shirts",       value: "Shirt" },
+  { label: "Shirts",       value: "Shirts" },
   { label: "T-Shirts",     value: "T-Shirts" },
   { label: "Jeans",        value: "Jeans" },
   { label: "Kurta",        value: "Kurta" },
@@ -117,7 +128,6 @@ const CATEGORIES: CategoryItem[] = [
 ];
 
 const mod  = (n: number, m: number) => ((n % m) + m) % m;
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const hsl  = (h: number, s: number, l: number, a = 1) =>
   a < 1 ? `hsla(${h},${s}%,${l}%,${a})` : `hsl(${h},${s}%,${l}%)`;
 
@@ -131,31 +141,34 @@ function scrollToProducts() {
   else window.scrollTo({ top: window.innerHeight * 0.95, behavior: "smooth" });
 }
 
+
 // ─────────────────────────────────────────────────────────────
-//  SimpleBtn — plain button, no magnetic effect
+//  SimpleBtn — no magnetic effect, plain button
 // ─────────────────────────────────────────────────────────────
-interface SimpleBtnProps {
+interface MagBtnProps {
   children: React.ReactNode;
   onClick?: () => void;
   className?: string;
   style?: React.CSSProperties;
+  strength?: number;
   ariaLabel?: string;
 }
 
-const SimpleBtn = memo(function SimpleBtn({
+const MagneticBtn = memo(function MagneticBtn({
   children, onClick, className = "", style = {}, ariaLabel,
-}: SimpleBtnProps) {
+}: MagBtnProps) {
   return (
     <button
       onClick={onClick}
       aria-label={ariaLabel}
       className={`xmag ${className}`}
-      style={style}
+      style={{ ...style, willChange: "auto" }}
     >
       {children}
     </button>
   );
 });
+
 
 // ─────────────────────────────────────────────────────────────
 //  ProgressLine
@@ -198,7 +211,7 @@ const ProgressLine = memo(({
 ));
 
 // ─────────────────────────────────────────────────────────────
-//  HERO
+//  HERO — Main Component
 // ─────────────────────────────────────────────────────────────
 export function Hero({ onCategoryClick }: HeroProps) {
 
@@ -211,19 +224,16 @@ export function Hero({ onCategoryClick }: HeroProps) {
   const [imgLoaded,      setImgLoaded]      = useState<Record<number, boolean>>({});
 
   const rootRef  = useRef<HTMLDivElement>(null);
-  const spotRef  = useRef<HTMLDivElement>(null);
   const bgRef    = useRef<HTMLDivElement>(null);
   const textRef  = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchX   = useRef(0);
   const touchY   = useRef(0);
-  const rafId    = useRef<number>(0);
-  const mTarget  = useRef({ x: .5, y: .5, rx: 0, ry: 0 });
-  const mLerped  = useRef({ x: .5, y: .5, rx: 0, ry: 0 });
 
   const slides = useMemo(() => SLIDES, []);
 
+  // Preload images
   useEffect(() => {
     slides.forEach((s, i) => {
       const img = new Image();
@@ -232,54 +242,16 @@ export function Hero({ onCategoryClick }: HeroProps) {
     });
   }, [slides]);
 
+  // Pause on tab hidden
   useEffect(() => {
     const fn = () => setPaused(document.hidden);
     document.addEventListener("visibilitychange", fn);
     return () => document.removeEventListener("visibilitychange", fn);
   }, []);
 
-  // Mouse tracking
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      const r = rootRef.current?.getBoundingClientRect();
-      if (!r) return;
-      mTarget.current = {
-        x:  (e.clientX - r.left) / r.width,
-        y:  (e.clientY - r.top)  / r.height,
-        rx: e.clientX - r.left,
-        ry: e.clientY - r.top,
-      };
-    };
-    window.addEventListener("mousemove", fn);
-    return () => window.removeEventListener("mousemove", fn);
-  }, []);
 
-  // RAF parallax
-  useEffect(() => {
-    const tick = () => {
-      const ml = mLerped.current;
-      const mt = mTarget.current;
-      ml.x  = lerp(ml.x,  mt.x,  PARALLAX_LERP);
-      ml.y  = lerp(ml.y,  mt.y,  PARALLAX_LERP);
-      ml.rx = lerp(ml.rx, mt.rx, PARALLAX_LERP);
-      ml.ry = lerp(ml.ry, mt.ry, PARALLAX_LERP);
-      const ox = (ml.x - .5) * 2;
-      const oy = (ml.y - .5) * 2;
-      if (bgRef.current)
-        bgRef.current.style.transform = `scale(1.07) translate(${ox * -11}px,${oy * -7}px)`;
-      if (textRef.current)
-        textRef.current.style.transform = `translate(${ox * 6}px,${oy * 4}px)`;
-      if (spotRef.current) {
-        spotRef.current.style.left = `${ml.rx}px`;
-        spotRef.current.style.top  = `${ml.ry}px`;
-      }
-      rafId.current = requestAnimationFrame(tick);
-    };
-    rafId.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId.current);
-  }, []);
 
-  // Keyboard
+  // Keyboard nav
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") nextSlide();
@@ -420,22 +392,24 @@ export function Hero({ onCategoryClick }: HeroProps) {
         .xcrd  {animation:xCardIn .6s .64s both cubic-bezier(.34,1.56,.64,1);}
         .xshim {background-size:260% 100%;animation:xShim 3s infinite linear;}
 
-        .xmag{
-          cursor:pointer;border:none;outline:none;
-          display:inline-flex;align-items:center;justify-content:center;
-          -webkit-tap-highlight-color:transparent;
-          transition:opacity .15s ease, transform .15s ease;
-        }
-        .xmag:active{opacity:.75;transform:scale(.97);}
+        /* ✅ Magnetic button base */
+        .xmag{cursor:pointer;border:none;outline:none;display:inline-flex;align-items:center;justify-content:center;}
 
-        .xspot{
-          pointer-events:none;position:absolute;
-          width:520px;height:520px;margin:-260px 0 0 -260px;
-          border-radius:50%;
-          background:radial-gradient(ellipse,rgba(255,255,255,.045) 0%,transparent 62%);
-          mix-blend-mode:screen;will-change:left,top;z-index:8;
+        /* ✅ Desktop hover effects — only pointer:fine (mouse) */
+        @media(pointer:fine){
+          .xmag{transition:box-shadow .2s ease,filter .16s ease;}
+          .xmag:active{filter:brightness(.8);}
+          .xpill:hover{transform:translateY(-2px) scale(1.04);}
+          .xarr:hover{transform:scale(1.1);}
         }
-        @media(pointer:coarse){.xspot{display:none!important;}}
+
+        /* ✅ Mobile tap — simple opacity feedback, no transform weirdness */
+        @media(pointer:coarse){
+          .xmag{-webkit-tap-highlight-color:transparent;}
+          .xmag:active{opacity:.7;}
+          .xpill{transform:none!important;}
+          .xarr{transform:none!important;}
+        }
 
         .xgrain{
           pointer-events:none;position:absolute;inset:-55%;width:210%;height:210%;
@@ -447,8 +421,11 @@ export function Hero({ onCategoryClick }: HeroProps) {
         .xcat::-webkit-scrollbar{display:none;}
         .xcat{-ms-overflow-style:none;scrollbar-width:none;}
 
-        .xpill{transition:background .22s,border-color .22s,color .22s,box-shadow .22s;}
-        .xarr {transition:background .2s,border-color .2s;}
+        .xpill{transition:background .22s,border-color .22s,color .22s,box-shadow .22s,transform .18s cubic-bezier(.34,1.56,.64,1);}
+        .xpill:active{transform:scale(.96);}
+
+        .xarr{transition:background .2s,border-color .2s,transform .18s cubic-bezier(.34,1.56,.64,1);}
+        .xarr:active{transform:scale(.92);}
 
         .xhl{font-family:'Anton',sans-serif;text-transform:uppercase;line-height:.87;letter-spacing:-.022em;color:#fff;}
         .xcnt{animation:xCnt .5s .08s both;}
@@ -482,9 +459,12 @@ export function Hero({ onCategoryClick }: HeroProps) {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <div ref={spotRef} className="xspot" style={{ left: "50%", top: "50%" }} />
+        {/* Cursor spotlight — CSS hides on mobile */}
+
+        {/* Film grain */}
         <div className="xgrain" style={{ zIndex: 60, mixBlendMode: "overlay" }} />
 
+        {/* Exiting photo */}
         {prevIdx !== null && (
           <div key={`prev-${prevIdx}`} className="xpout absolute inset-0" style={{ zIndex: 1 }}>
             <img src={slides[prevIdx].image} alt="" aria-hidden="true"
@@ -492,8 +472,16 @@ export function Hero({ onCategoryClick }: HeroProps) {
           </div>
         )}
 
-        <div ref={bgRef} key={`bg-${current}`} className="xpin absolute inset-0"
-          style={{ zIndex: 2, willChange: "transform", transformOrigin: "center center" }}>
+        {/* Active photo */}
+        <div
+          ref={bgRef}
+          key={`bg-${current}`}
+          className="xpin absolute inset-0"
+          style={{
+            zIndex: 2,
+            transformOrigin: "center center",
+          }}
+        >
           <img
             src={slide.image}
             alt={slide.headline.join(" ")}
@@ -520,8 +508,13 @@ export function Hero({ onCategoryClick }: HeroProps) {
         </div>
 
         {/* Text overlay */}
-        <div ref={textRef} style={{ position:"absolute",inset:0,zIndex:5,display:"flex",flexDirection:"column",justifyContent:"flex-end",willChange:"transform" }}>
-
+        <div
+          ref={textRef}
+          style={{
+            position:"absolute",inset:0,zIndex:5,
+            display:"flex",flexDirection:"column",justifyContent:"flex-end",
+          }}
+        >
           {/* Top bar */}
           <div style={{ position:"absolute",top:0,left:0,right:0,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"clamp(20px,3.5vw,44px) clamp(20px,4vw,60px)",zIndex:10 }}>
             <div key={`chip-${current}`} className="xchip" style={{ display:"flex",alignItems:"center",gap:"8px" }}>
@@ -550,22 +543,22 @@ export function Hero({ onCategoryClick }: HeroProps) {
 
             {/* CTAs */}
             <div key={`cta-${current}`} style={{ display:"flex",flexWrap:"wrap",gap:"12px",marginTop:"28px",alignItems:"center" }}>
-              <SimpleBtn onClick={() => handleShop(slide.ctaCategory)} className="xb0 xshim"
+              <MagneticBtn onClick={() => handleShop(slide.ctaCategory)} className="xb0 xshim"
                 style={{ padding:"14px 28px",borderRadius:"12px",fontSize:"12.5px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",background:`linear-gradient(90deg,${hsl(H,S,L-4)} 0%,${hsl(H+22,S,L+4)} 50%,${hsl(H,S,L-4)} 100%)`,color:"#fff",boxShadow:`0 10px 44px ${hsl(H,S,L,.46)},inset 0 1px 0 rgba(255,255,255,.18)`,overflow:"hidden",gap:"8px" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
                 </svg>
                 {slide.cta}
-              </SimpleBtn>
-              <SimpleBtn onClick={() => handleShop(slide.secondaryCategory)} className="xb1"
+              </MagneticBtn>
+              <MagneticBtn onClick={() => handleShop(slide.secondaryCategory)} className="xb1"
                 style={{ padding:"14px 22px",borderRadius:"12px",fontSize:"12.5px",fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",background:"rgba(255,255,255,.07)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,.15)",color:"rgba(255,255,255,.76)",gap:"7px" }}>
                 {slide.secondary}
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-              </SimpleBtn>
+              </MagneticBtn>
             </div>
 
-            {/* Trust */}
+            {/* Trust signals */}
             <div key={`trust-${current}`} className="xl6" style={{ display:"flex",alignItems:"center",gap:"16px",marginTop:"18px" }}>
               {["Free Shipping","Easy Returns","COD Available"].map(t => (
                 <div key={t} style={{ display:"flex",alignItems:"center",gap:"5px" }}>
@@ -576,21 +569,21 @@ export function Hero({ onCategoryClick }: HeroProps) {
             </div>
           </div>
 
-          {/* Info card */}
+          {/* Info card — desktop only */}
           <div key={`card-${current}`} className="xcrd"
             style={{ position:"absolute",bottom:"clamp(90px,12vh,134px)",right:"clamp(28px,4vw,66px)",width:"204px",padding:"17px 20px 15px",borderRadius:"20px",background:"rgba(7,9,20,.9)",backdropFilter:"blur(28px) saturate(1.9)",border:"1px solid rgba(255,255,255,.1)",boxShadow:"0 24px 68px rgba(0,0,0,.54),inset 0 1px 0 rgba(255,255,255,.08)",zIndex:12 }}>
             <div style={{ position:"absolute",top:0,left:"18px",right:"18px",height:"1.5px",borderRadius:"0 0 2px 2px",background:`linear-gradient(90deg,${accent},transparent)` }} />
             <p className="xant" style={{ fontSize:"13px",color:"#fff",letterSpacing:"0.08em",lineHeight:1.2,marginBottom:"6px" }}>{slide.badge.toUpperCase()}</p>
             <p style={{ fontSize:"10.5px",color:"rgba(255,255,255,.38)",lineHeight:1.65,marginBottom:"12px" }}>{slide.badgeSub}</p>
-            <SimpleBtn onClick={() => handleShop(slide.ctaCategory)}
+            <MagneticBtn onClick={() => handleShop(slide.ctaCategory)} strength={0.22}
               style={{ background:"none",gap:"5px",color:hsl(H,S,L+8),fontSize:"11px",fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase" }}>
               Shop Now
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </SimpleBtn>
+            </MagneticBtn>
           </div>
         </div>
 
-        {/* Right ticker */}
+        {/* Right vertical ticker — desktop */}
         <div className="xtick" style={{ position:"absolute",right:"clamp(18px,2.5vw,32px)",top:"50%",transform:"translateY(-50%)",zIndex:20,display:"flex",flexDirection:"column",alignItems:"center",gap:"10px" }}>
           {slides.map((_, i) => (
             <button key={i} onClick={() => goTo(i)} aria-label={`Slide ${i + 1}`} className="xmag"
@@ -610,6 +603,7 @@ export function Hero({ onCategoryClick }: HeroProps) {
         {/* Bottom toolbar */}
         <div style={{ position:"absolute",bottom:0,left:0,right:0,zIndex:25 }}>
           <div style={{ background:"linear-gradient(to top,rgba(3,4,10,.97) 0%,rgba(3,4,10,.7) 40%,transparent 100%)",paddingTop:"60px" }}>
+            {/* Category pills */}
             <div className="xcat xcatwrap flex items-center gap-2 overflow-x-auto" style={{ padding:"0 clamp(16px,4vw,60px) 10px" }}>
               {CATEGORIES.map(cat => {
                 const on = activeCategory === cat.value;
@@ -623,6 +617,7 @@ export function Hero({ onCategoryClick }: HeroProps) {
               })}
             </div>
 
+            {/* Progress + arrows */}
             <div className="xtbar flex items-center gap-4" style={{ padding:"6px clamp(16px,4vw,60px) 24px" }}>
               <ProgressLine count={slides.length} current={current} progress={progress} onGo={goTo} H={H} S={S} L={L} />
               <span className="xmshow" style={{ fontSize:"10px",fontWeight:700,color:"rgba(255,255,255,.32)",letterSpacing:"0.1em",fontVariantNumeric:"tabular-nums",whiteSpace:"nowrap",flexShrink:0 }}>
@@ -637,12 +632,12 @@ export function Hero({ onCategoryClick }: HeroProps) {
                   { fn: prevSlide, label: "Previous slide", d: "M15 18l-6-6 6-6" },
                   { fn: nextSlide, label: "Next slide",     d: "M9 18l6-6-6-6" },
                 ] as const).map(({ fn, label, d }) => (
-                  <SimpleBtn key={label} onClick={fn} ariaLabel={label} className="xarr"
+                  <MagneticBtn key={label} onClick={fn} ariaLabel={label} strength={0.22} className="xarr"
                     style={{ width:"36px",height:"36px",borderRadius:"10px",background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",backdropFilter:"blur(14px)",cursor:"pointer" }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d={d} />
                     </svg>
-                  </SimpleBtn>
+                  </MagneticBtn>
                 ))}
               </div>
             </div>

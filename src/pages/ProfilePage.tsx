@@ -44,7 +44,7 @@ const NAV_ITEMS = [
   { label: "Home",         to: "/",        icon: "🏠" },
   { label: "How to Order", to: "/faq",     icon: "🛒" },
   { label: "Favourites",   to: "/wishlist",icon: "❤️" },
-  { label: "My Account",   to: "/profile", icon: "👤" },
+  { label: "My Profile",   to: "/my-profile", icon: "👤" },
   { label: "FAQ's",        to: "/faq",     icon: "❓" },
   { label: "Contact Us",   to: "/contact", icon: "📞" },
 ];

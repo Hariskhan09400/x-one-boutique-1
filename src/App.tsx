@@ -399,7 +399,7 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
       setLastAdded(newItem);
       return [...prev, newItem];
     });
-    toast.success(`${product.name} added! 🛍️`, { position: "bottom-center" });
+    // Toast handled by ProductPage/ProductCard for clean single popup
   }, []);
 
   const removeItem     = useCallback((id: string) => {
@@ -479,8 +479,6 @@ const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const toggleWishlist = useCallback((id: string) => {
     setWishlist((p) => {
       const next = p.includes(id) ? p.filter((x) => x !== id) : [...p, id];
-      if (!p.includes(id)) toast.success("Added to wishlist ❤️");
-      else toast.error("Removed from wishlist");
       return next;
     });
   }, []);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { Star, Trash2, ChevronDown, ChevronUp, Send, Lock, MessageSquare, TrendingUp } from "lucide-react";
+import { Star, Trash2, ChevronDown, ChevronUp, Send, Lock, MessageSquare } from "lucide-react";
 
 interface Review {
   id: number;
@@ -13,85 +13,108 @@ interface Review {
   created_at: string;
 }
 
+// ── Play sound from user's settings (same logic as Settingspage)
+function playReviewSound() {
+  try {
+    const CLICK_SOUNDS = [
+      { id: "click1", url: "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" },
+      { id: "click2", url: "https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" },
+      { id: "click3", url: "https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3" },
+      { id: "click4", url: "https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3" },
+    ];
+    // Find settings key — try logged-in user first, then guest
+    const userRaw = localStorage.getItem("xob_user");
+    const userId  = userRaw ? JSON.parse(userRaw)?.id : null;
+    const key     = userId ? `xob_settings_${userId}` : "xob_settings_guest";
+    const raw     = localStorage.getItem(key);
+    const s       = raw ? JSON.parse(raw) : null;
+    if (!s?.soundEffects) return;
+    const sound   = CLICK_SOUNDS.find(c => c.id === (s.clickSound || "click1")) || CLICK_SOUNDS[0];
+    const audio   = new Audio(sound.url);
+    audio.volume  = 0.45;
+    audio.play().catch(() => {
+      // Web Audio API fallback
+      try {
+        const ctx  = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.12);
+      } catch {}
+    });
+  } catch {}
+}
+
 const ReviewSection = ({ productId }: { productId: string }) => {
   const navigate = useNavigate();
 
-  const [reviews, setReviews]             = useState<Review[]>([]);
-  const [visibleCount, setVisibleCount]   = useState(3);
-  const [comment, setComment]             = useState("");
-  const [rating, setRating]               = useState(1);
-  const [hoverRating, setHoverRating]     = useState(0);
-  const [isSubmitting, setIsSubmitting]   = useState(false);
-  const [currentUser, setCurrentUser]     = useState<any>(null);
-  const [deleteId, setDeleteId]           = useState<number | null>(null);
+  const [reviews,       setReviews]       = useState<Review[]>([]);
+  const [visibleCount,  setVisibleCount]  = useState(3);
+  const [comment,       setComment]       = useState("");
+  const [rating,        setRating]        = useState(5);
+  const [hoverRating,   setHoverRating]   = useState(0);
+  const [isSubmitting,  setIsSubmitting]  = useState(false);
+  const [currentUser,   setCurrentUser]   = useState<any>(null);
+  const [deleteId,      setDeleteId]      = useState<number | null>(null);
   const [focusTextarea, setFocusTextarea] = useState(false);
 
-  // ================= DATE FORMAT =================
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("en-IN", {
+  const formatDateTime = (d: string) =>
+    new Date(d).toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: true,
     });
-  };
 
-  // ================= AUTH SYNC =================
+  // Auth sync
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
       setCurrentUser(data.session?.user ?? null);
     };
     checkUser();
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => { setCurrentUser(session?.user ?? null); }
-    );
-    return () => { listener.subscription.unsubscribe(); };
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, s) => setCurrentUser(s?.user ?? null));
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  // ================= LOAD REVIEWS =================
+  // Load reviews
   const loadReviews = async () => {
     const { data } = await supabase
-      .from("reviews")
-      .select("*")
+      .from("reviews").select("*")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
     setReviews(data || []);
   };
-
   useEffect(() => { loadReviews(); }, [productId]);
 
-  // ================= POST REVIEW =================
+  // Post review
   const handlePost = async () => {
-    if (!currentUser) {
-      toast.error("Please login first.");
-      navigate("/login");
-      return;
-    }
+    if (!currentUser) { toast.error("Please login first."); navigate("/login"); return; }
     if (!comment.trim()) return;
     setIsSubmitting(true);
     const { error } = await supabase.from("reviews").insert([{
       product_id: productId,
-      user_id: currentUser.id,
-      username: currentUser.user_metadata?.username || currentUser.email?.split("@")[0],
+      user_id:    currentUser.id,
+      username:   currentUser.user_metadata?.username || currentUser.email?.split("@")[0],
       rating,
-      comment: comment.trim(),
+      comment:    comment.trim(),
     }]);
-    if (error) toast.error("Failed to post review.");
-    else {
-      toast.success("Review posted!");
-      setComment("");
-      setRating(1);
+    if (error) {
+      toast.error("Failed to post review.");
+    } else {
+      playReviewSound(); // ← user ke settings ka sound
+      toast.success("Review posted! ✓");
+      setComment(""); setRating(5);
       loadReviews();
     }
     setIsSubmitting(false);
   };
 
-  // ================= DELETE REVIEW =================
+  // Delete review
   const confirmDelete = async () => {
     if (!deleteId) return;
     await supabase.from("reviews").delete().eq("id", deleteId).eq("user_id", currentUser.id);
@@ -100,14 +123,12 @@ const ReviewSection = ({ productId }: { productId: string }) => {
     loadReviews();
   };
 
-  // ── Derived stats ──
   const avgRating = reviews.length
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : null;
 
-  const ratingCounts = [5, 4, 3, 2, 1].map(star => ({
-    star,
-    count: reviews.filter(r => r.rating === star).length,
+  const ratingCounts = [5,4,3,2,1].map(star => ({
+    star, count: reviews.filter(r => r.rating === star).length,
   }));
 
   const ratingLabel = (r: number) => {
@@ -118,143 +139,288 @@ const ReviewSection = ({ productId }: { productId: string }) => {
     return "Poor";
   };
 
-  // ──────────────────────────────────────────────────────────────────────────
   return (
-    <div className="mt-12 rounded-3xl overflow-hidden
-      bg-white dark:bg-[#0d1117]
-      border border-slate-200/80 dark:border-white/[0.05]
-      shadow-[0_4px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_40px_rgba(0,0,0,0.4)]">
+    <>
+      <style>{`
+        .xrs-wrap {
+          border-radius: 20px;
+          overflow: hidden;
+          background: #fff;
+          border: 1px solid rgba(0,0,0,.08);
+          box-shadow: 0 4px 24px rgba(0,0,0,.06);
+        }
+        .dark .xrs-wrap {
+          background: #0d1117;
+          border-color: rgba(255,255,255,.05);
+          box-shadow: 0 4px 32px rgba(0,0,0,.4);
+        }
 
-      {/* ── HEADER ── */}
-      <div className="px-8 pt-8 pb-6 border-b border-slate-100 dark:border-white/[0.05]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
-              <MessageSquare size={17} className="text-blue-500" />
+        /* Header */
+        .xrs-header {
+          padding: clamp(16px,3vw,28px) clamp(16px,4vw,28px);
+          border-bottom: 1px solid rgba(0,0,0,.07);
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+          align-items: flex-start;
+          justify-content: space-between;
+        }
+        .dark .xrs-header { border-color: rgba(255,255,255,.05); }
+
+        /* Body */
+        .xrs-body {
+          padding: clamp(14px,3vw,28px) clamp(14px,4vw,28px);
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        /* Form card */
+        .xrs-form {
+          border-radius: 16px;
+          padding: clamp(14px,3vw,20px);
+          border: 1.5px solid rgba(148,163,184,.2);
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .xrs-form.focused {
+          border-color: rgba(37,99,235,.35);
+          box-shadow: 0 0 0 3px rgba(37,99,235,.07);
+        }
+
+        /* Textarea */
+        .xrs-ta {
+          width: 100%;
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1.5px solid rgba(0,0,0,.09);
+          background: #fff;
+          color: #0f172a;
+          font-size: 14px;
+          font-family: inherit;
+          resize: none;
+          outline: none;
+          transition: border-color .2s, box-shadow .2s;
+          box-sizing: border-box;
+        }
+        .dark .xrs-ta {
+          background: rgba(255,255,255,.03);
+          border-color: rgba(255,255,255,.07);
+          color: #e2e8f0;
+        }
+        .xrs-ta:focus {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+        }
+        .xrs-ta::placeholder { color: #94a3b8; }
+        .xrs-ta:disabled { cursor: not-allowed; opacity: .6; }
+
+        /* Review card */
+        .xrs-card {
+          border-radius: 16px;
+          padding: clamp(12px,2.5vw,18px);
+          border: 1px solid rgba(0,0,0,.07);
+          background: rgba(248,250,255,.6);
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .dark .xrs-card {
+          background: rgba(255,255,255,.02);
+          border-color: rgba(255,255,255,.05);
+        }
+        .xrs-card:hover {
+          border-color: rgba(0,0,0,.12);
+          box-shadow: 0 4px 16px rgba(0,0,0,.07);
+        }
+        .dark .xrs-card:hover {
+          border-color: rgba(255,255,255,.09);
+          box-shadow: 0 4px 20px rgba(0,0,0,.3);
+        }
+
+        /* Submit btn */
+        .xrs-submit {
+          display: flex; align-items: center; gap: 6px;
+          padding: 10px 18px; border-radius: 10px;
+          font-size: 12px; font-weight: 800; color: #fff;
+          background: linear-gradient(135deg,#2563eb,#4f46e5);
+          border: none; cursor: pointer;
+          box-shadow: 0 4px 14px rgba(37,99,235,.3);
+          transition: all .18s ease;
+          white-space: nowrap;
+        }
+        .xrs-submit:hover:not(:disabled) { filter:brightness(1.1); transform:translateY(-1px); }
+        .xrs-submit:active:not(:disabled) { transform:scale(.97); }
+        .xrs-submit:disabled { opacity:.4; cursor:not-allowed; box-shadow:none; }
+
+        /* Load more btn */
+        .xrs-more {
+          display: flex; align-items: center; gap: 6px;
+          padding: 10px 20px; border-radius: 12px;
+          font-size: 12px; font-weight: 700;
+          border: 1px solid rgba(0,0,0,.1);
+          background: rgba(0,0,0,.03);
+          cursor: pointer; transition: all .18s ease;
+        }
+        .dark .xrs-more { border-color:rgba(255,255,255,.09); background:rgba(255,255,255,.04); color:#94a3b8; }
+        .xrs-more:hover { background:rgba(0,0,0,.06); transform:translateY(-1px); }
+        .dark .xrs-more:hover { background:rgba(255,255,255,.08); }
+
+        /* Delete btn */
+        .xrs-del {
+          display: flex; align-items: center; gap: 4px;
+          font-size: 10px; font-weight: 700;
+          color: #94a3b8; background: none; border: none;
+          cursor: pointer; padding: 4px 6px; border-radius: 6px;
+          transition: all .15s ease;
+          opacity: 0;
+        }
+        .xrs-card:hover .xrs-del { opacity: 1; }
+        .xrs-del:hover { color: #ef4444; background: rgba(239,68,68,.08); }
+
+        /* Star btn */
+        .xrs-star-btn {
+          background: none; border: none; cursor: pointer; padding: 2px;
+          transition: transform .15s ease;
+        }
+        .xrs-star-btn:disabled { cursor: not-allowed; }
+
+        /* Modal */
+        .xrs-modal-bg {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,.55);
+          backdrop-filter: blur(8px);
+          z-index: 9999;
+          display: flex; align-items: center; justify-content: center;
+          padding: 16px;
+        }
+        .xrs-modal {
+          width: 100%; max-width: 320px;
+          border-radius: 20px; overflow: hidden;
+          background: #fff;
+          border: 1px solid rgba(0,0,0,.09);
+          box-shadow: 0 24px 64px rgba(0,0,0,.2);
+        }
+        .dark .xrs-modal {
+          background: #0d1117;
+          border-color: rgba(255,255,255,.08);
+        }
+
+        /* Alert banner */
+        .xrs-alert {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 14px; border-radius: 12px; margin-bottom: 12px;
+          background: rgba(245,158,11,.08);
+          border: 1px solid rgba(245,158,11,.2);
+          font-size: 12px; font-weight: 600;
+          color: #92400e;
+        }
+        .dark .xrs-alert { color: #fbbf24; background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.2); }
+      `}</style>
+
+      <div className="xrs-wrap">
+
+        {/* ── HEADER ── */}
+        <div className="xrs-header">
+          <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+            <div style={{
+              width:"36px", height:"36px", borderRadius:"10px", flexShrink:0,
+              background:"rgba(37,99,235,.1)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+            }}>
+              <MessageSquare size={16} color="#2563eb" />
             </div>
             <div>
-              <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+              <h3 style={{ margin:0, fontSize:"15px", fontWeight:900, letterSpacing:"-0.01em" }}
+                className="text-slate-900 dark:text-white">
                 Customer Reviews
               </h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                {reviews.length} {reviews.length === 1 ? "review" : "reviews"} for this product
+              <p style={{ margin:"2px 0 0", fontSize:"11px" }} className="text-slate-400 dark:text-slate-500">
+                {reviews.length} {reviews.length === 1 ? "review" : "reviews"}
               </p>
             </div>
           </div>
 
-          {/* Summary stat */}
+          {/* Rating summary */}
           {avgRating && (
-            <div className="flex items-center gap-4">
-              {/* Big rating */}
-              <div className="flex flex-col items-center">
-                <span className="text-4xl font-black text-slate-900 dark:text-white leading-none">
+            <div style={{ display:"flex", alignItems:"center", gap:"14px", flexWrap:"wrap" }}>
+              <div style={{ textAlign:"center" }}>
+                <p style={{ margin:0, fontSize:"36px", fontWeight:900, lineHeight:1 }}
+                  className="text-slate-900 dark:text-white">
                   {avgRating}
-                </span>
-                <div className="flex gap-0.5 mt-1">
+                </p>
+                <div style={{ display:"flex", gap:"2px", marginTop:"4px", justifyContent:"center" }}>
                   {[1,2,3,4,5].map(s => (
-                    <Star
-                      key={s}
-                      size={12}
+                    <Star key={s} size={11}
                       className={parseFloat(avgRating) >= s
                         ? "text-amber-400 fill-amber-400"
-                        : "text-slate-200 dark:text-slate-700 fill-slate-200 dark:fill-slate-700"}
-                    />
+                        : "text-slate-200 dark:text-slate-700 fill-slate-200 dark:fill-slate-700"} />
                   ))}
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">
-                  {ratingLabel(parseFloat(avgRating))}
-                </span>
+                <p style={{ margin:"3px 0 0", fontSize:"9px", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}
+                  className="text-slate-400">{ratingLabel(parseFloat(avgRating))}</p>
               </div>
 
-              {/* Bar chart */}
-              <div className="space-y-1.5 min-w-[140px]">
+              <div style={{ display:"flex", flexDirection:"column", gap:"4px", minWidth:"120px" }}>
                 {ratingCounts.map(({ star, count }) => (
-                  <div key={star} className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 w-2">{star}</span>
-                    <div className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-white/[0.06] overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-amber-400 transition-all duration-700"
-                        style={{ width: reviews.length ? `${(count / reviews.length) * 100}%` : "0%" }}
-                      />
+                  <div key={star} style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                    <span style={{ fontSize:"9px", fontWeight:700, width:"8px" }} className="text-slate-400">{star}</span>
+                    <div style={{ flex:1, height:"5px", borderRadius:"3px", overflow:"hidden" }}
+                      className="bg-slate-100 dark:bg-white/[0.06]">
+                      <div style={{
+                        height:"100%", borderRadius:"3px",
+                        width: reviews.length ? `${(count/reviews.length)*100}%` : "0%",
+                        background:"#f59e0b", transition:"width .6s ease",
+                      }} />
                     </div>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-600 w-3 text-right">{count}</span>
+                    <span style={{ fontSize:"9px", width:"12px", textAlign:"right" }}
+                      className="text-slate-400">{count}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </div>
-      </div>
 
-      <div className="px-6 md:px-8 py-8 space-y-8">
+        {/* ── BODY ── */}
+        <div className="xrs-body">
 
-        {/* ── WRITE REVIEW FORM ── */}
-        <div
-          className="rounded-2xl overflow-hidden transition-all duration-300"
-          style={{
-            background: focusTextarea
-              ? "linear-gradient(135deg, rgba(59,130,246,0.04), rgba(99,102,241,0.03))"
-              : undefined,
-          }}
-        >
-          <div
-            className="p-5 rounded-2xl border transition-all duration-300"
-            style={{
-              background: "transparent",
-              borderColor: focusTextarea
-                ? "rgba(59,130,246,0.3)"
-                : "rgba(148,163,184,0.2)",
-              boxShadow: focusTextarea
-                ? "0 0 0 3px rgba(59,130,246,0.07), 0 4px 20px rgba(0,0,0,0.04)"
-                : "none",
-            }}
-          >
-            {/* Not logged in banner */}
+          {/* ── WRITE REVIEW FORM ── */}
+          <div className={`xrs-form ${focusTextarea ? "focused" : ""}`}>
             {!currentUser && (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4
-                bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20">
-                <Lock size={14} className="text-amber-500 shrink-0" />
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                  You must be logged in to write a review.{" "}
+              <div className="xrs-alert">
+                <Lock size={13} color="#d97706" style={{ flexShrink:0 }} />
+                <span>
+                  Login to write a review.{" "}
                   <button onClick={() => navigate("/login")}
-                    className="underline underline-offset-2 hover:text-amber-600 transition-colors">
+                    style={{ background:"none", border:"none", cursor:"pointer", fontWeight:800, textDecoration:"underline", color:"inherit", padding:0 }}>
                     Login here
                   </button>
-                </p>
+                </span>
               </div>
             )}
 
-            {/* Star selector */}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-                Your Rating
-              </span>
-              <div className="flex gap-1" onMouseLeave={() => setHoverRating(0)}>
+            {/* Stars */}
+            <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"12px", flexWrap:"wrap" }}>
+              <span style={{ fontSize:"10px", fontWeight:800, textTransform:"uppercase", letterSpacing:"0.1em" }}
+                className="text-slate-400">Your Rating</span>
+              <div style={{ display:"flex", gap:"3px" }} onMouseLeave={() => setHoverRating(0)}>
                 {[1,2,3,4,5].map(star => {
                   const active = star <= (hoverRating || rating);
                   return (
-                    <button
-                      key={star}
-                      type="button"
+                    <button key={star} type="button"
+                      className="xrs-star-btn"
                       disabled={!currentUser}
                       onClick={() => setRating(star)}
                       onMouseEnter={() => currentUser && setHoverRating(star)}
-                      aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
-                      className="transition-all duration-150 disabled:cursor-not-allowed"
-                      style={{ transform: active ? "scale(1.2)" : "scale(1)" }}
-                    >
-                      <Star
-                        size={22}
+                      style={{ transform: active ? "scale(1.2)" : "scale(1)" }}>
+                      <Star size={24}
                         className={active
-                          ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
-                          : "text-slate-300 dark:text-slate-600"}
-                      />
+                          ? "text-amber-400 fill-amber-400"
+                          : "text-slate-300 dark:text-slate-600"} />
                     </button>
                   );
                 })}
               </div>
               {(hoverRating || rating) > 0 && (
-                <span className="text-[11px] font-bold text-blue-500 ml-1">
+                <span style={{ fontSize:"11px", fontWeight:700, color:"#2563eb" }}>
                   {ratingLabel(hoverRating || rating)}
                 </span>
               )}
@@ -262,15 +428,8 @@ const ReviewSection = ({ productId }: { productId: string }) => {
 
             {/* Textarea */}
             <textarea
+              className="xrs-ta"
               disabled={!currentUser}
-              className="w-full px-4 py-3 rounded-xl border text-sm outline-none resize-none transition-all duration-200
-                bg-white dark:bg-white/[0.03]
-                text-slate-800 dark:text-slate-200
-                placeholder:text-slate-400 dark:placeholder:text-slate-600
-                border-slate-200 dark:border-white/[0.06]
-                focus:border-blue-400 dark:focus:border-blue-500
-                focus:ring-2 focus:ring-blue-500/15
-                disabled:bg-slate-50 dark:disabled:bg-white/[0.02] disabled:cursor-not-allowed"
               placeholder={currentUser ? "Share your honest experience with this product..." : "Login to write a review..."}
               rows={3}
               value={comment}
@@ -280,199 +439,149 @@ const ReviewSection = ({ productId }: { productId: string }) => {
             />
 
             {/* Submit row */}
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-[11px] text-slate-400 dark:text-slate-600 font-medium">
-                {comment.length > 0 && `${comment.length} characters`}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:"10px", flexWrap:"wrap", gap:"8px" }}>
+              <span style={{ fontSize:"11px" }} className="text-slate-400">
+                {comment.length > 0 && `${comment.length} chars`}
               </span>
               <button
+                className="xrs-submit"
                 onClick={handlePost}
                 disabled={isSubmitting || !currentUser || !comment.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl
-                  text-xs font-black text-white
-                  bg-gradient-to-r from-blue-600 to-blue-500
-                  hover:from-blue-700 hover:to-blue-600
-                  shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30
-                  disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
-                  transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <div style={{ width:"12px", height:"12px", borderRadius:"50%", border:"2px solid rgba(255,255,255,.3)", borderTopColor:"#fff", animation:"spin .8s linear infinite" }} />
                     Posting...
                   </>
                 ) : (
-                  <>
-                    <Send size={13} />
-                    Post Review
-                  </>
+                  <><Send size={12} /> Post Review</>
                 )}
               </button>
             </div>
           </div>
-        </div>
 
-        {/* ── REVIEWS LIST ── */}
-        <div className="space-y-4">
-          {reviews.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center mx-auto mb-3">
-                <MessageSquare size={20} className="text-slate-300 dark:text-slate-600" />
+          {/* ── REVIEWS LIST ── */}
+          <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+            {reviews.length === 0 && (
+              <div style={{ textAlign:"center", padding:"clamp(24px,5vw,48px) 16px" }}>
+                <div style={{ width:"44px", height:"44px", borderRadius:"14px", margin:"0 auto 12px", display:"flex", alignItems:"center", justifyContent:"center" }}
+                  className="bg-slate-100 dark:bg-white/[0.04]">
+                  <MessageSquare size={18} className="text-slate-300 dark:text-slate-600" />
+                </div>
+                <p style={{ fontSize:"14px", fontWeight:600, margin:"0 0 4px" }} className="text-slate-400">No reviews yet</p>
+                <p style={{ fontSize:"12px", margin:0 }} className="text-slate-300 dark:text-slate-600">Be the first to review!</p>
               </div>
-              <p className="text-sm font-semibold text-slate-400 dark:text-slate-600">No reviews yet</p>
-              <p className="text-xs text-slate-300 dark:text-slate-700 mt-1">Be the first to review this product!</p>
-            </div>
-          )}
+            )}
 
-          {reviews.slice(0, visibleCount).map((r, idx) => (
-            <div
-              key={r.id}
-              className="group relative p-5 rounded-2xl border
-                bg-slate-50/50 dark:bg-white/[0.02]
-                border-slate-200/70 dark:border-white/[0.05]
-                hover:border-slate-300 dark:hover:border-white/[0.09]
-                hover:shadow-md dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]
-                transition-all duration-300"
-              style={{ animationDelay: `${idx * 50}ms` }}
-            >
-              {/* Top row */}
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600
-                    flex items-center justify-center text-white text-xs font-black shrink-0 shadow-md shadow-blue-500/20">
-                    {r.username.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-800 dark:text-white leading-none">
-                      @{r.username}
-                    </p>
-                    <div className="flex gap-0.5 mt-1">
-                      {[1,2,3,4,5].map(s => (
-                        <Star
-                          key={s}
-                          size={11}
-                          className={s <= r.rating
-                            ? "text-amber-400 fill-amber-400"
-                            : "text-slate-200 dark:text-slate-700 fill-slate-200 dark:fill-slate-700"}
-                        />
-                      ))}
-                      <span className="text-[10px] font-bold text-slate-400 ml-1">
-                        {ratingLabel(r.rating)}
-                      </span>
+            {reviews.slice(0, visibleCount).map((r, idx) => (
+              <div key={r.id} className="xrs-card" style={{ animationDelay:`${idx*40}ms` }}>
+                {/* Top row */}
+                <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"10px", marginBottom:"10px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:"10px", minWidth:0 }}>
+                    {/* Avatar */}
+                    <div style={{
+                      width:"36px", height:"36px", borderRadius:"10px", flexShrink:0,
+                      background:"linear-gradient(135deg,#3b82f6,#6366f1)",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:"13px", fontWeight:900, color:"#fff",
+                      boxShadow:"0 4px 10px rgba(99,102,241,.3)",
+                    }}>
+                      {r.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ minWidth:0 }}>
+                      <p style={{ margin:0, fontSize:"13px", fontWeight:800, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}
+                        className="text-slate-800 dark:text-white">
+                        @{r.username}
+                      </p>
+                      <div style={{ display:"flex", alignItems:"center", gap:"4px", marginTop:"3px", flexWrap:"wrap" }}>
+                        <div style={{ display:"flex", gap:"1px" }}>
+                          {[1,2,3,4,5].map(s => (
+                            <Star key={s} size={11}
+                              className={s<=r.rating
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-slate-200 dark:text-slate-700 fill-slate-200 dark:fill-slate-700"} />
+                          ))}
+                        </div>
+                        <span style={{ fontSize:"10px", fontWeight:700 }} className="text-slate-400">
+                          {ratingLabel(r.rating)}
+                        </span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Date + delete */}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"4px", flexShrink:0 }}>
+                    <span style={{ fontSize:"10px", fontWeight:500, whiteSpace:"nowrap" }} className="text-slate-400 dark:text-slate-500">
+                      {formatDateTime(r.created_at)}
+                    </span>
+                    {currentUser?.id === r.user_id && (
+                      <button className="xrs-del" onClick={() => setDeleteId(r.id)}>
+                        <Trash2 size={10} /> Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Right side: date + delete */}
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <span className="text-[10px] font-medium text-slate-400 dark:text-slate-600 tabular-nums">
-                    {formatDateTime(r.created_at)}
-                  </span>
-                  {currentUser?.id === r.user_id && (
-                    <button
-                      onClick={() => setDeleteId(r.id)}
-                      aria-label="Delete review"
-                      className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-600
-                        hover:text-red-500 dark:hover:text-red-400
-                        opacity-0 group-hover:opacity-100
-                        transition-all duration-200"
-                    >
-                      <Trash2 size={11} />
-                      Delete
-                    </button>
-                  )}
-                </div>
+                {/* Comment */}
+                <p style={{ margin:0, fontSize:"13px", lineHeight:1.65, paddingLeft:"46px" }}
+                  className="text-slate-700 dark:text-slate-300">
+                  {r.comment}
+                </p>
               </div>
-
-              {/* Comment */}
-              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pl-12">
-                {r.comment}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* ── LOAD MORE / SHOW LESS ── */}
-        {reviews.length > 3 && (
-          <div className="flex justify-center pt-2">
-            {visibleCount < reviews.length ? (
-              <button
-                onClick={() => setVisibleCount(visibleCount + 3)}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl
-                  text-xs font-bold text-slate-600 dark:text-slate-400
-                  bg-slate-100 dark:bg-white/[0.04]
-                  border border-slate-200 dark:border-white/[0.06]
-                  hover:bg-slate-200 dark:hover:bg-white/[0.08]
-                  hover:text-slate-800 dark:hover:text-slate-200
-                  transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                <ChevronDown size={14} />
-                Load {Math.min(3, reviews.length - visibleCount)} more reviews
-              </button>
-            ) : (
-              <button
-                onClick={() => setVisibleCount(3)}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl
-                  text-xs font-bold text-slate-600 dark:text-slate-400
-                  bg-slate-100 dark:bg-white/[0.04]
-                  border border-slate-200 dark:border-white/[0.06]
-                  hover:bg-slate-200 dark:hover:bg-white/[0.08]
-                  hover:text-slate-800 dark:hover:text-slate-200
-                  transition-all duration-200 hover:scale-105 active:scale-95"
-              >
-                <ChevronUp size={14} />
-                Show less
-              </button>
-            )}
+            ))}
           </div>
-        )}
+
+          {/* ── LOAD MORE ── */}
+          {reviews.length > 3 && (
+            <div style={{ display:"flex", justifyContent:"center" }}>
+              {visibleCount < reviews.length ? (
+                <button className="xrs-more text-slate-600 dark:text-slate-400"
+                  onClick={() => setVisibleCount(v => v + 3)}>
+                  <ChevronDown size={13} />
+                  Load {Math.min(3, reviews.length - visibleCount)} more
+                </button>
+              ) : (
+                <button className="xrs-more text-slate-600 dark:text-slate-400"
+                  onClick={() => setVisibleCount(3)}>
+                  <ChevronUp size={13} /> Show less
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── DELETE CONFIRM MODAL ── */}
+      {/* ── DELETE MODAL ── */}
       {deleteId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4"
-          onClick={() => setDeleteId(null)}>
-          <div
-            className="w-full max-w-[340px] rounded-2xl overflow-hidden
-              bg-white dark:bg-[#0d1117]
-              border border-slate-200 dark:border-white/[0.08]
-              shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Modal top */}
-            <div className="p-6 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={20} className="text-red-500" />
+        <div className="xrs-modal-bg" onClick={() => setDeleteId(null)}>
+          <div className="xrs-modal" onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"clamp(18px,4vw,24px)", textAlign:"center" }}>
+              <div style={{ width:"44px", height:"44px", borderRadius:"14px", margin:"0 auto 14px", display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(239,68,68,.1)" }}>
+                <Trash2 size={18} color="#ef4444" />
               </div>
-              <p className="font-black text-slate-900 dark:text-white text-base mb-1">
-                Delete Review?
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-500 leading-relaxed">
-                This action cannot be undone. Your review will be permanently removed.
+              <p style={{ margin:"0 0 6px", fontSize:"15px", fontWeight:900 }} className="text-slate-900 dark:text-white">Delete Review?</p>
+              <p style={{ margin:0, fontSize:"12px", lineHeight:1.6 }} className="text-slate-500">
+                This action cannot be undone.
               </p>
             </div>
-            {/* Actions */}
-            <div className="flex border-t border-slate-100 dark:border-white/[0.05]">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="flex-1 py-3.5 text-sm font-bold text-slate-600 dark:text-slate-400
-                  hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors"
-              >
+            <div style={{ display:"flex", borderTop:"1px solid rgba(0,0,0,.07)" }} className="dark:border-white/[0.05]">
+              <button onClick={() => setDeleteId(null)}
+                style={{ flex:1, padding:"14px", fontSize:"13px", fontWeight:700, background:"none", border:"none", cursor:"pointer", borderRight:"1px solid rgba(0,0,0,.07)" }}
+                className="text-slate-600 dark:text-slate-400 dark:border-white/[0.05] hover:bg-slate-50 dark:hover:bg-white/[0.03]">
                 Cancel
               </button>
-              <div className="w-[1px] bg-slate-100 dark:bg-white/[0.05]" />
-              <button
-                onClick={confirmDelete}
-                className="flex-1 py-3.5 text-sm font-black text-red-500 dark:text-red-400
-                  hover:bg-red-50 dark:hover:bg-red-500/[0.07] transition-colors"
-              >
+              <button onClick={confirmDelete}
+                style={{ flex:1, padding:"14px", fontSize:"13px", fontWeight:900, background:"none", border:"none", cursor:"pointer", color:"#ef4444" }}
+                className="hover:bg-red-50 dark:hover:bg-red-500/[0.07]">
                 Delete
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </>
   );
 };
 

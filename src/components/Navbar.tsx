@@ -197,7 +197,7 @@ const Navbar = ({
                   </div>
                   <div className="flex flex-col leading-none">
                     <span className="text-[9px] text-blue-500 font-black uppercase">
-                      {user.role === "admin" ? "Admin" : "My Profile"}
+                      {user.role === "admin" ? "Admin" : "My Account"}
                     </span>
                     <span className="text-sm font-bold text-slate-900 dark:text-white max-w-[90px] truncate">
                       {user.name}

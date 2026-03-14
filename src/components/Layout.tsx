@@ -10,8 +10,7 @@ interface LayoutProps {
 }
 
 // Pages jahan footer NAHI aayega
-const HIDE_FOOTER_ROUTES = ["/profile", "/orders"];
-
+const HIDE_FOOTER_ROUTES = ["/profile", "/orders", "/settings", "/my-profile"];
 const Layout = ({ children }: LayoutProps) => {
   const { pathname } = useLocation();
   const showFooter = !HIDE_FOOTER_ROUTES.includes(pathname);
