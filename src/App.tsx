@@ -86,10 +86,11 @@ import PrivacyPage  from "./pages/PrivacyPage";
 import RefundPage   from "./pages/RefundPage";
 import ShippingPage from "./pages/ShippingPage";
 import TermsPage    from "./pages/TermsPage";
-import ShopPage from "./pages/ShopPage";
-import WishlistPage from "./pages/WishlistPage";
+import ShopPage     from "./pages/ShopPage";
+
 // ─── Lazy Pages ───────────────────────────────────────────────────────────────
-const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const WishlistPage   = lazy(() => import("./pages/Wishlistpage"));
+const SettingsPage   = lazy(() => import("./pages/SettingsPage"));
 const HomePage       = lazy(() => import("./pages/HomePage"));
 const ProductPage    = lazy(() => import("./pages/ProductPage"));
 const CartPage       = lazy(() => import("./pages/CartPage"));
@@ -125,7 +126,6 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  // ✅ FIX: token is optional — login works even without explicit token
   login: (userData: User, token?: string) => void;
   logout: () => Promise<void>;
   updateUser: (partial: Partial<User>) => void;
@@ -184,7 +184,6 @@ interface AppNotification {
   icon?: string;
 }
 
-// Promo codes
 const PROMO_CODES: Record<string, number> = {
   "XONE10": 10,
   "STYLE20": 20,
@@ -238,7 +237,6 @@ export const useNotifications = (): NotificationContextType => {
 // SECTION 3 — PROVIDERS
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ─── Theme Provider ───────────────────────────────────────────────────────────
 const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
@@ -259,10 +257,8 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
-// ─── Auth Provider ─────────────────────────────────────────────────────────────
-// ✅ BUG FIX: Properly reads Supabase session + builds user with `id`
 const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser]       = useState<User | null>(null);
+  const [user, setUser]           = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -270,14 +266,11 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          // Try localStorage first (has name etc.)
           const saved = localStorage.getItem("xob_user");
           if (saved) {
             const parsed = JSON.parse(saved);
-            // Ensure id is always from session (authoritative)
             setUser({ ...parsed, id: session.user.id });
           } else {
-            // Build user from Supabase session metadata
             setUser({
               id:       session.user.id,
               name:     session.user.user_metadata?.name ||
@@ -312,7 +305,6 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser({ ...parsed, id: session.user.id });
           }
         } else if (event === "TOKEN_REFRESHED" && session?.user) {
-          // Keep user state in sync silently
           const saved = localStorage.getItem("xob_user");
           if (saved) {
             const parsed = JSON.parse(saved);
@@ -325,9 +317,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ✅ FIX: login now builds proper User with id, token is optional
   const login = useCallback((userData: User, token?: string) => {
-    // Ensure id exists — if not provided, fetch from session
     const finalUser: User = {
       id:       userData.id || "",
       name:     userData.name || "User",
@@ -339,9 +329,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(finalUser);
     localStorage.setItem("xob_user", JSON.stringify(finalUser));
     if (token) localStorage.setItem("token", token);
-    toast.success(`Welcome back, ${finalUser.name}! 🛍️`, {
-      style: { fontWeight: "700" }
-    });
+    toast.success(`Welcome back, ${finalUser.name}! 🛍️`, { style: { fontWeight: "700" } });
   }, []);
 
   const logout = useCallback(async () => {
@@ -362,29 +350,17 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const value = useMemo(() => ({
-    user,
-    isLoading,
+    user, isLoading,
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
-    login,
-    logout,
-    updateUser,
+    login, logout, updateUser,
   }), [user, isLoading, login, logout, updateUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PATCH: CartProvider + WishlistProvider
-// User ID ke saath keys — har user ka apna alag cart + wishlist
-// Logout pe clear NAHI hoga — next login pe wapas milega
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── CART PROVIDER — REPLACE YOUR EXISTING CartProvider WITH THIS ──────────────
 const CartProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useContext(AuthContext) ?? { user: null };
-
-  // User-specific key — guest ke liye "xob_cart_guest"
   const cartKey = user?.id ? `xob_cart_${user.id}` : "xob_cart_guest";
 
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -397,7 +373,6 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [activePromo,   setActivePromo]   = useState<string | null>(null);
 
-  // Re-load cart when user changes (login / logout)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(cartKey);
@@ -405,7 +380,6 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
     } catch { setCart([]); }
   }, [cartKey]);
 
-  // Save to localStorage on every cart change
   useEffect(() => {
     localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, cartKey]);
@@ -416,9 +390,7 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
       const existing = prev.find((i) => i.id === key);
       const newItem: CartItem = { ...product, id: key, quantity: 1, selectedSize: size };
       if (existing) {
-        return prev.map((i) =>
-          i.id === key ? { ...i, quantity: i.quantity + 1 } : i
-        );
+        return prev.map((i) => i.id === key ? { ...i, quantity: i.quantity + 1 } : i);
       }
       setLastAdded(newItem);
       return [...prev, newItem];
@@ -464,7 +436,7 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
     if (i.originalPrice) return s + (i.originalPrice - i.price) * i.quantity;
     return s;
   }, 0), [cart]);
-  const cartTotal     = useMemo(() => Math.round(rawTotal * (1 - promoDiscount / 100)), [rawTotal, promoDiscount]);
+  const cartTotal = useMemo(() => Math.round(rawTotal * (1 - promoDiscount / 100)), [rawTotal, promoDiscount]);
 
   const value = useMemo(() => ({
     cart, cartItemCount, cartTotal, cartSavings,
@@ -480,12 +452,8 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
-
-// ── WISHLIST PROVIDER — REPLACE YOUR EXISTING WishlistProvider WITH THIS ──────
 const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useContext(AuthContext) ?? { user: null };
-
-  // User-specific key
   const wishlistKey = user?.id ? `xob_wishlist_${user.id}` : "xob_wishlist_guest";
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
@@ -493,7 +461,6 @@ const WishlistProvider = ({ children }: { children: ReactNode }) => {
     catch { return []; }
   });
 
-  // Re-load wishlist when user changes
   useEffect(() => {
     try {
       const saved = localStorage.getItem(wishlistKey);
@@ -501,7 +468,6 @@ const WishlistProvider = ({ children }: { children: ReactNode }) => {
     } catch { setWishlist([]); }
   }, [wishlistKey]);
 
-  // Save on every change
   useEffect(() => {
     localStorage.setItem(wishlistKey, JSON.stringify(wishlist));
   }, [wishlist, wishlistKey]);
@@ -524,7 +490,7 @@ const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 };
-// ─── Recently Viewed Provider ─────────────────────────────────────────────────
+
 const RecentlyViewedProvider = ({ children }: { children: ReactNode }) => {
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>(() => {
     try { return JSON.parse(localStorage.getItem("xob_recently") || "[]"); }
@@ -552,7 +518,6 @@ const RecentlyViewedProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// ─── Notification Provider ─────────────────────────────────────────────────────
 const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
@@ -685,13 +650,13 @@ const GuestRoute = ({ children }: { children?: ReactNode }) => {
 // SECTION 6 — LAYOUTS
 // ══════════════════════════════════════════════════════════════════════════════
 
-import Navbar     from "./components/Navbar";
-import Layout     from "./components/Layout";
+import Navbar      from "./components/Navbar";
+import Layout      from "./components/Layout";
 import ThemeToggle from "./components/ThemeToggle";
 
 const MainLayout = () => {
-  const { user, logout }               = useAuth();
-  const { cartItemCount, openCart }    = useCart();
+  const { user, logout }            = useAuth();
+  const { cartItemCount, openCart } = useCart();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   return (
@@ -728,11 +693,11 @@ const AdminLayout = () => {
   const location = useLocation();
 
   const navItems = [
-    { label: "Dashboard", href: "/admin", icon: BarChart3 },
-    { label: "Orders",    href: "/admin/orders", icon: Package },
-    { label: "Products",  href: "/admin/products", icon: Tag },
+    { label: "Dashboard", href: "/admin",           icon: BarChart3 },
+    { label: "Orders",    href: "/admin/orders",    icon: Package },
+    { label: "Products",  href: "/admin/products",  icon: Tag },
     { label: "Customers", href: "/admin/customers", icon: User },
-    { label: "Settings",  href: "/admin/settings", icon: Settings },
+    { label: "Settings",  href: "/admin/settings",  icon: Settings },
   ];
 
   return (
@@ -804,9 +769,7 @@ const GlobalLoader = ({ message }: { message?: string }) => (
       X ONE BOUTIQUE
     </p>
     {message && (
-      <p className="text-slate-400 text-xs mt-2 font-medium animate-pulse">
-        {message}
-      </p>
+      <p className="text-slate-400 text-xs mt-2 font-medium animate-pulse">{message}</p>
     )}
   </div>
 );
@@ -843,12 +806,11 @@ const ScrollToTop = () => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SECTION 8 — AI ASSISTANT BUBBLE
-// New feature: floating AI style assistant
 // ══════════════════════════════════════════════════════════════════════════════
 
 const AIAssistantBubble = () => {
-  const { cart }    = useCart();
-  const { user }    = useAuth();
+  const { cart } = useCart();
+  const { user } = useAuth();
   const [isOpen,    setIsOpen]    = useState(false);
   const [messages,  setMessages]  = useState<{ role: "ai" | "user"; text: string }[]>([
     { role: "ai", text: "Hi! I'm your X One Style AI 👗 Ask me for outfit recommendations, size help, or style advice!" }
@@ -898,7 +860,6 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
 
   return (
     <>
-      {/* Bubble Button */}
       <motion.button
         onClick={() => setIsOpen((p) => !p)}
         className="fixed bottom-6 right-6 z-[300] w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full shadow-2xl shadow-blue-500/40 flex items-center justify-center text-white"
@@ -909,29 +870,23 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
         <AnimatePresence mode="wait">
           {isOpen ? (
             <motion.div key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}
             >
               <X size={22} />
             </motion.div>
           ) : (
             <motion.div key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}
             >
               <Sparkles size={22} />
             </motion.div>
           )}
         </AnimatePresence>
-        {/* Pulse ring */}
         <span className="absolute w-full h-full rounded-full bg-blue-400 opacity-30 animate-ping" />
       </motion.button>
 
-      {/* Chat Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -942,7 +897,6 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
             className="fixed bottom-24 right-6 z-[300] w-80 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl shadow-black/20 dark:shadow-black/60 border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col"
             style={{ maxHeight: "420px" }}
           >
-            {/* Header */}
             <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
@@ -959,7 +913,6 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ minHeight: "200px", maxHeight: "260px" }}>
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -968,13 +921,11 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
                       <Sparkles size={10} className="text-white" />
                     </div>
                   )}
-                  <div
-                    className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-xs font-medium leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-tr-sm"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-sm"
-                    }`}
-                  >
+                  <div className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-xs font-medium leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-blue-600 text-white rounded-tr-sm"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-sm"
+                  }`}>
                     {msg.text}
                   </div>
                 </div>
@@ -986,11 +937,8 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
                   </div>
                   <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 flex gap-1">
                     {[0, 1, 2].map((i) => (
-                      <span
-                        key={i}
-                        className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
-                        style={{ animationDelay: `${i * 0.15}s` }}
-                      />
+                      <span key={i} className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"
+                        style={{ animationDelay: `${i * 0.15}s` }} />
                     ))}
                   </div>
                 </div>
@@ -998,20 +946,15 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Suggestions */}
             <div className="px-3 pb-2 flex gap-2 overflow-x-auto scrollbar-hide">
               {["Outfit ideas", "Size help", "What's trending?"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => { setInput(s); }}
-                  className="flex-shrink-0 text-[10px] font-bold px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                >
+                <button key={s} onClick={() => setInput(s)}
+                  className="flex-shrink-0 text-[10px] font-bold px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
                   {s}
                 </button>
               ))}
             </div>
 
-            {/* Input */}
             <div className="p-3 border-t dark:border-slate-800 flex gap-2">
               <input
                 value={input}
@@ -1020,11 +963,8 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
                 placeholder="Ask about styles..."
                 className="flex-1 px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500 dark:text-white placeholder:text-slate-400"
               />
-              <button
-                onClick={sendMessage}
-                disabled={isLoading || !input.trim()}
-                className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center disabled:opacity-40 active:scale-95 transition-all hover:bg-blue-700"
-              >
+              <button onClick={sendMessage} disabled={isLoading || !input.trim()}
+                className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center disabled:opacity-40 active:scale-95 transition-all hover:bg-blue-700">
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -1036,7 +976,7 @@ Always recommend products from categories: T-Shirts, Shirts, Trousers, Jackets, 
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SECTION 9 — CART SIDEBAR (full featured)
+// SECTION 9 — CART SIDEBAR
 // ══════════════════════════════════════════════════════════════════════════════
 
 const loadRazorpay = (): Promise<boolean> => {
@@ -1086,12 +1026,10 @@ const CartSidebar = () => {
 
   const validateAddress = useCallback((): boolean => {
     const { pincode, city, fullName, address, landmark } = formData;
-    if (!pincode || pincode.length !== 6) {
-      toast.error("Valid 6-digit PIN required ❌"); return false;
-    }
-    if (!city) { toast.error("City required"); return false; }
+    if (!pincode || pincode.length !== 6) { toast.error("Valid 6-digit PIN required ❌"); return false; }
+    if (!city)     { toast.error("City required"); return false; }
     if (!fullName) { toast.error("Full name required"); return false; }
-    if (!address) { toast.error("Address required"); return false; }
+    if (!address)  { toast.error("Address required"); return false; }
     if (!landmark) { toast.error("Landmark required"); return false; }
     return true;
   }, [formData]);
@@ -1168,8 +1106,8 @@ const CartSidebar = () => {
         theme: { color: "#2563eb" },
         handler: async (response: any) => {
           await supabase.from("orders").update({
-            status:             "paid",
-            razorpay_order_id:  response.razorpay_payment_id,
+            status:            "paid",
+            razorpay_order_id: response.razorpay_payment_id,
           }).eq("id", orderId);
 
           new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3")
@@ -1260,7 +1198,6 @@ const CartSidebar = () => {
     []
   );
 
-  // ── Promo-code UI ──
   const handleApplyPromo = () => {
     applyPromo(promoInput);
     setPromoInput("");
@@ -1280,7 +1217,6 @@ const CartSidebar = () => {
             transition={{ type: "spring", damping: 26, stiffness: 280 }}
             className="relative w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col"
           >
-            {/* Header */}
             <div className="p-5 border-b dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
               <button
                 onClick={() =>
@@ -1308,11 +1244,8 @@ const CartSidebar = () => {
               </button>
             </div>
 
-            {/* Body */}
             <div className="flex-1 overflow-y-auto">
               <AnimatePresence mode="wait">
-
-                {/* ── STEP: CART ── */}
                 {step === "cart" && (
                   <motion.div key="cart"
                     initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
@@ -1332,7 +1265,6 @@ const CartSidebar = () => {
                       </div>
                     ) : (
                       <>
-                        {/* Savings badge */}
                         {cartSavings > 0 && (
                           <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
                             <Tag size={14} className="text-green-600" />
@@ -1385,7 +1317,6 @@ const CartSidebar = () => {
                           </div>
                         ))}
 
-                        {/* Promo Code */}
                         <div className="mt-4">
                           {activePromo ? (
                             <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 p-3 rounded-xl">
@@ -1418,7 +1349,6 @@ const CartSidebar = () => {
                   </motion.div>
                 )}
 
-                {/* ── STEP: CONTACT ── */}
                 {step === "contact" && (
                   <motion.div key="contact"
                     initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
@@ -1452,7 +1382,6 @@ const CartSidebar = () => {
                   </motion.div>
                 )}
 
-                {/* ── STEP: ADDRESS ── */}
                 {step === "address" && (
                   <motion.div key="address"
                     initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}
@@ -1491,7 +1420,6 @@ const CartSidebar = () => {
                       value={formData.landmark}
                       onChange={setField("landmark")}
                     />
-                    {/* Delivery info */}
                     <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl">
                       <Truck size={16} className="text-blue-500 flex-shrink-0" />
                       <div>
@@ -1504,22 +1432,16 @@ const CartSidebar = () => {
               </AnimatePresence>
             </div>
 
-            {/* Footer */}
             <div className="p-5 border-t dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
-              {/* Order summary */}
               <div className="space-y-1.5 mb-4">
                 <div className="flex justify-between text-xs text-slate-500">
                   <span className="font-medium">Subtotal ({cart.reduce((s,i)=>s+i.quantity,0)} items)</span>
-                  <span className="font-bold dark:text-slate-300">
-                    ₹{cart.reduce((s,i)=>s+i.price*i.quantity,0)}
-                  </span>
+                  <span className="font-bold dark:text-slate-300">₹{cart.reduce((s,i)=>s+i.price*i.quantity,0)}</span>
                 </div>
                 {promoDiscount > 0 && (
                   <div className="flex justify-between text-xs text-green-600">
                     <span className="font-bold">Promo ({promoDiscount}% off)</span>
-                    <span className="font-black">
-                      -₹{cart.reduce((s,i)=>s+i.price*i.quantity,0) - cartTotal}
-                    </span>
+                    <span className="font-black">-₹{cart.reduce((s,i)=>s+i.price*i.quantity,0) - cartTotal}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xs text-slate-500">
@@ -1625,7 +1547,7 @@ const LogoutConfirmationModal = ({
 );
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SECTION 11 — ANIMATED ROUTES
+// SECTION 11 — ANIMATED ROUTES  ✅ FIXED
 // ══════════════════════════════════════════════════════════════════════════════
 
 const AnimatedRoutes = () => {
@@ -1635,18 +1557,20 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-      <Route path="/shop" element={
-  <PageTransition><ShopPage /></PageTransition>
-} />
-// MainLayout ke andar add karo:
-<Route path="/wishlist" element={
-  <PageTransition><WishlistPage /></PageTransition>
-} />
+
         {/* ── Main Layout ── */}
         <Route element={<MainLayout />}>
           <Route path="/" element={
             <Suspense fallback={<PageLoader />}>
               <PageTransition><HomePage /></PageTransition>
+            </Suspense>
+          } />
+          <Route path="/shop" element={
+            <PageTransition><ShopPage /></PageTransition>
+          } />
+          <Route path="/wishlist" element={
+            <Suspense fallback={<PageLoader />}>
+              <PageTransition><WishlistPage /></PageTransition>
             </Suspense>
           } />
           <Route path="/product/:id" element={
@@ -1677,8 +1601,23 @@ const AnimatedRoutes = () => {
                 <PageTransition><ProfilePage /></PageTransition>
               </Suspense>
             } />
+            <Route path="/settings" element={
+              <Suspense fallback={<PageLoader />}>
+                <PageTransition><SettingsPage /></PageTransition>
+              </Suspense>
+            } />
           </Route>
+
+          {/* Info / Policy Pages */}
+          <Route path="/about"    element={<PageTransition><AboutPage    /></PageTransition>} />
+          <Route path="/contact"  element={<PageTransition><ContactPage  /></PageTransition>} />
+          <Route path="/faq"      element={<PageTransition><FAQPage      /></PageTransition>} />
+          <Route path="/privacy"  element={<PageTransition><PrivacyPage  /></PageTransition>} />
+          <Route path="/refund"   element={<PageTransition><RefundPage   /></PageTransition>} />
+          <Route path="/shipping" element={<PageTransition><ShippingPage /></PageTransition>} />
+          <Route path="/terms"    element={<PageTransition><TermsPage    /></PageTransition>} />
         </Route>
+
         {/* ── Auth Layout ── */}
         <Route element={<AuthLayout />}>
           <Route element={<GuestRoute />}>
@@ -1715,28 +1654,14 @@ const AnimatedRoutes = () => {
             } />
           </Route>
         </Route>
-         
-         {/* ── Info / Policy Pages ── */}
-<Route element={<MainLayout />}>
-  <Route path="/about"    element={<PageTransition><AboutPage    /></PageTransition>} />
-  <Route path="/contact"  element={<PageTransition><ContactPage  /></PageTransition>} />
-  <Route path="/faq"      element={<PageTransition><FAQPage      /></PageTransition>} />
-  <Route path="/privacy"  element={<PageTransition><PrivacyPage  /></PageTransition>} />
-  <Route path="/refund"   element={<PageTransition><RefundPage   /></PageTransition>} />
-  <Route path="/shipping" element={<PageTransition><ShippingPage /></PageTransition>} />
-  <Route path="/terms"    element={<PageTransition><TermsPage    /></PageTransition>} />
-</Route>
+
         {/* ── 404 ── */}
         <Route path="*" element={
           <Suspense fallback={<PageLoader />}>
             <PageTransition><NotFoundPage /></PageTransition>
           </Suspense>
         } />
-        <Route path="/settings" element={
-  <Suspense fallback={<PageLoader />}>
-    <PageTransition><SettingsPage /></PageTransition>
-  </Suspense>
-} />
+
       </Routes>
     </AnimatePresence>
   );
