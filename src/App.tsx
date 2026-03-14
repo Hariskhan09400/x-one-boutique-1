@@ -90,7 +90,7 @@ import ShopPage     from "./pages/ShopPage";
 
 // ─── Lazy Pages ───────────────────────────────────────────────────────────────
 const WishlistPage   = lazy(() => import("./pages/Wishlistpage"));
-const SettingsPage   = lazy(() => import("./pages/SettingsPage"));
+const SettingsPage = lazy(() => import("./pages/Settingspage"));
 const HomePage       = lazy(() => import("./pages/HomePage"));
 const ProductPage    = lazy(() => import("./pages/ProductPage"));
 const CartPage       = lazy(() => import("./pages/CartPage"));
