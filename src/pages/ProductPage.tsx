@@ -15,7 +15,7 @@
 // ══════════════════════════════════════════════════════════════════════
 
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { products } from "../data/products";
+import { useAllProducts } from "../App";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import ReviewSection from "../components/ReviewSection";
 import { useWishlist } from "../App";
@@ -107,7 +107,8 @@ export default function ProductPage({ onAddToCart }: ProductPageProps) {
   const navigate = useNavigate();
   const { toggleWishlist, isWishlisted } = useWishlist();
 
-  const product = useMemo(() => products.find((p) => p.id === id), [id]);
+  const { allProducts: products } = useAllProducts();
+  const product = useMemo(() => products.find((p) => p.id === id), [id, products]);
   const wishlisted = product ? isWishlisted(product.id) : false;
 
   const images = useMemo(() => {
@@ -122,7 +123,7 @@ export default function ProductPage({ onAddToCart }: ProductPageProps) {
       products
         .filter((p) => p.category === product?.category && p.id !== id)
         .slice(0, 4),
-    [product, id]
+    [product, id, products]
   );
 
   const [imgIdx,       setImgIdx]       = useState(0);

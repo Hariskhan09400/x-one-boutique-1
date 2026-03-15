@@ -235,6 +235,53 @@ export const useNotifications = (): NotificationContextType => {
   return ctx;
 };
 
+// ── Products Context — DB + local merged
+interface ProductsContextType { allProducts: Product[]; loading: boolean; refetch: () => void; }
+const ProductsContext = createContext<ProductsContextType>({ allProducts: products, loading: false, refetch: () => {} });
+export const useAllProducts = () => useContext(ProductsContext);
+
+// ── ProductsProvider
+const ProductsProvider = ({ children }: { children: React.ReactNode }) => {
+  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  const [loading,    setLoading]    = useState(true);
+
+  const refetch = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await supabase.from("products").select("*").order("id", { ascending: false });
+      if (data && data.length > 0) {
+        const converted = data.map((row: any): Product => ({
+          id:            "db_" + row.id,
+          name:          row.name,
+          price:         row.price,
+          originalPrice: row.original_price ?? undefined,
+          description:   row.description,
+          category:      row.category,
+          images:        row.images?.length ? row.images : [],
+          inStock:       row.in_stock ?? true,
+        }));
+        setDbProducts(converted);
+      }
+    } catch (e) {
+      console.error("Products fetch error:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { refetch(); }, [refetch]);
+
+  const dbNames = new Set(dbProducts.map((p: Product) => p.name.toLowerCase()));
+  const localFiltered = products.filter((p: Product) => !dbNames.has(p.name.toLowerCase()));
+  const allProducts = [...dbProducts, ...localFiltered];
+
+  return (
+    <ProductsContext.Provider value={{ allProducts, loading, refetch }}>
+      {children}
+    </ProductsContext.Provider>
+  );
+};
+
 // ══════════════════════════════════════════════════════════════════════════════
 // SECTION 3 — PROVIDERS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1836,6 +1883,7 @@ function App() {
             <WishlistProvider>
               <RecentlyViewedProvider>
                 <NotificationProvider>
+                  <ProductsProvider>
                   <Router>
                     <ScrollToTop />
                     <Toaster
@@ -1848,6 +1896,7 @@ function App() {
                     />
                     <AnimatedRoutes />
                   </Router>
+                  </ProductsProvider>
                 </NotificationProvider>
               </RecentlyViewedProvider>
             </WishlistProvider>

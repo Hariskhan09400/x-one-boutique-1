@@ -2,18 +2,18 @@
 import { useState, useMemo, useRef } from "react";
 import { Hero } from "../components/Hero";
 import { ProductCard } from "../components/ProductCard";
-import { ProductModal } from "../components/ProductModal";
 import ReviewSection from "../components/ReviewSection";
-import { products } from "../data/products";
-import { useCart } from "../App";
+import { useCart, useAllProducts } from "../App"; // ← useAllProducts, no local products import
 import type { Product } from "../types";
 
 const HomePage = () => {
   const { addToCart } = useCart();
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'pop'|'low'|'high'|'az'>('pop');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const { allProducts: products } = useAllProducts(); // ← DB + local merged
+
+  const [selectedProduct,  setSelectedProduct]  = useState<Product | null>(null);
+  const [searchQuery,      setSearchQuery]       = useState('');
+  const [sortBy,           setSortBy]            = useState<'pop'|'low'|'high'|'az'>('pop');
+  const [categoryFilter,   setCategoryFilter]    = useState<string | null>(null);
   const shopRef = useRef<HTMLDivElement>(null);
 
   const handleCategoryClick = (cat: string | null) => {
@@ -24,7 +24,7 @@ const HomePage = () => {
   };
 
   const filteredAndSortedProducts = useMemo(() => {
-    let filtered = products;
+    let filtered = products; // now includes DB products
     if (categoryFilter && categoryFilter !== 'All') {
       filtered = filtered.filter(p => p.category === categoryFilter);
     }
@@ -43,7 +43,7 @@ const HomePage = () => {
       case 'az':   sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
     }
     return sorted;
-  }, [searchQuery, sortBy, categoryFilter]);
+  }, [searchQuery, sortBy, categoryFilter, products]); // ← products in deps
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -122,21 +122,12 @@ const HomePage = () => {
           )}
         </section>
 
-        {/* ── REVIEW SECTION (ContactForm ki jagah) ── */}
+        {/* Review Section */}
         <div className="mt-16" id="reviews">
           <ReviewSection productId="homepage-general" />
         </div>
 
       </main>
-
-      {/* Product Modal */}
-      {selectedProduct && (
-        <ProductModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onAddToCart={addToCart}
-        />
-      )}
     </div>
   );
 };
